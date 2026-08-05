@@ -1,6 +1,7 @@
-import { _decorator, Component, Node, Vec3, Enum, input, Input, EventTouch } from 'cc';
-import { Ply_Event } from '../Tool/Ply_Event';
+import { _decorator, Node, Vec2, Enum, EventTouch } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
+import { Ply_Event } from '../Tool/Ply_Event';
+import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
 
 const { ccclass, property } = _decorator;
 
@@ -15,14 +16,14 @@ export class StirMilestone {
     @property({ tooltip: 'Progress threshold from 0 to 1' })
     public distanceThreshold: number = 0.5;
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On milestone reached event' })
     public onMilestoneReached: Ply_Event = new Ply_Event();
 
     public isReached: boolean = false;
 }
 
 @ccclass('ItemStirring')
-export class ItemStirring extends Component {
+export class ItemStirring extends Ply_EventHandlerComponent {
 
     @property
     public stirRadius: number = 1.2;
@@ -40,22 +41,22 @@ export class ItemStirring extends Component {
     public lineLength: number = 2.0;
 
     @property
-    public lineDirection: Vec3 = new Vec3(0, 1, 0);
+    public lineDirection: Vec2 = new Vec2(0, 1);
 
     @property({ type: [StirMilestone] })
     public milestones: StirMilestone[] = [];
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On stir begin event' })
     public onStirBegin: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On stir complete event' })
     public onStirComplete: Ply_Event = new Ply_Event();
 
     private isDone: boolean = false;
     private isStirring: boolean = false;
     private hasBegunStir: boolean = false;
     private currentProgress: number = 0;
-    private lastTouchPos: Vec3 = new Vec3();
+    private lastTouchPos: Vec2 = new Vec2();
 
     public get IsDone(): boolean {
         return this.isDone;
@@ -93,7 +94,7 @@ export class ItemStirring extends Component {
 
         if (event) {
             const touchPos = event.getUILocation();
-            this.lastTouchPos.set(touchPos.x, touchPos.y, 0);
+            this.lastTouchPos.set(touchPos.x, touchPos.y);
         }
 
         if (!this.hasBegunStir && this.milestones) {
@@ -120,8 +121,8 @@ export class ItemStirring extends Component {
         if (!this.isStirring || this.isDone || !this.enabled) return;
 
         const curTouchPos = event.getUILocation();
-        const dist = Vec3.distance(this.lastTouchPos, new Vec3(curTouchPos.x, curTouchPos.y, 0));
-        this.lastTouchPos.set(curTouchPos.x, curTouchPos.y, 0);
+        const dist = Vec2.distance(this.lastTouchPos, curTouchPos);
+        this.lastTouchPos.set(curTouchPos.x, curTouchPos.y);
 
         this.currentProgress += dist * 0.002;
         if (this.currentProgress > 1.0) this.currentProgress = 1.0;

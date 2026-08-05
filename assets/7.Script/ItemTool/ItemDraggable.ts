@@ -1,9 +1,10 @@
-import { _decorator, Component, Node, Vec3, tween, Tween, Enum, input, Input, EventTouch, UITransform } from 'cc';
-import { Ply_Event } from '../Tool/Ply_Event';
+import { _decorator, Component, Node, Vec2, Vec3, Enum, input, Input, EventTouch, UITransform, Rect } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
+import { Ply_Event } from '../Tool/Ply_Event';
 import { InputManager } from './InputManager';
 import { ItemType } from './ItemType';
 import { Item } from './Item';
+import { DOTween, Ease } from '../Tool/DOTween';
 
 const { ccclass, property } = _decorator;
 
@@ -58,16 +59,16 @@ export class ItemDraggable extends Component {
     @property
     public dragScaleDuration: number = 0.15;
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On begin drag event' })
     public onBeginDrag: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On drop success event (Passes target Node)' })
     public onDropSuccess: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On drop fail event' })
     public onDropFail: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'On return to start complete event' })
     public onReturnToStartComplete: Ply_Event = new Ply_Event();
 
     public item: Item | null = null;
@@ -93,6 +94,13 @@ export class ItemDraggable extends Component {
 
     public get IsReturningToStart(): boolean {
         return this.isReturningToStart;
+    }
+
+    public resetInEditor() {
+        if (!this.onBeginDrag) this.onBeginDrag = new Ply_Event();
+        if (!this.onDropSuccess) this.onDropSuccess = new Ply_Event();
+        if (!this.onDropFail) this.onDropFail = new Ply_Event();
+        if (!this.onReturnToStartComplete) this.onReturnToStartComplete = new Ply_Event();
     }
 
     protected onLoad() {
@@ -146,7 +154,7 @@ export class ItemDraggable extends Component {
     public BeginDrag(): boolean {
         if (!this.CanDrag()) return false;
 
-        Tween.stopAllByTarget(this.node);
+        DOTween.Kill(this.node);
         this.isReturningToStart = false;
         this.isForceReturningToStart = false;
         this.SetShadowActive(false);
@@ -168,9 +176,7 @@ export class ItemDraggable extends Component {
         }
 
         const scaled = this.originalScale.clone().multiplyScalar(this.dragScaleMultiplier);
-        tween(this.node)
-            .to(this.dragScaleDuration, { scale: scaled }, { easing: 'backOut' })
-            .start();
+        DOTween.DOScale(this.node, scaled, this.dragScaleDuration).SetEase(Ease.OutBack);
 
         this.isDraggingSession = true;
         this.onBeginDrag.invoke();
@@ -182,7 +188,8 @@ export class ItemDraggable extends Component {
         this.isDraggingSession = false;
         this.consumeCurrentDropFail = false;
 
-        if (this.targetItemType === ItemType.None) {
+        const dropTarget = this.FindMatchingDropTarget();
+        if (!dropTarget) {
             this.ResetScale();
             this.onDropFail.invoke();
             if (!this.consumeCurrentDropFail) {
@@ -200,33 +207,67 @@ export class ItemDraggable extends Component {
         // Drop Success
         this.ResetScale();
         this.SetShadowActive(true);
-        this.onDropSuccess.invoke();
+        this.onDropSuccess.invoke(dropTarget);
     }
 
     public ReturnToStart(spawnHeart: boolean = true) {
         this.spawnHeartOnReturnComplete = spawnHeart;
         this.isReturningToStart = true;
-        Tween.stopAllByTarget(this.node);
+        DOTween.Kill(this.node);
 
         const targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
             (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
 
-        tween(this.node)
-            .to(0.3, { worldPosition: targetPos }, { easing: 'quartOut' })
-            .call(() => this.OnReturnToStartComplete())
-            .start();
+        DOTween.DOMove(this.node, new Vec2(targetPos.x, targetPos.y), 0.3)
+            .SetEase(Ease.OutQuart)
+            .OnComplete(() => this.OnReturnToStartComplete());
+    }
+
+    /**
+     * Finds an active Item under the dropped item's center whose type matches targetItemType
+     */
+    private FindMatchingDropTarget(): Node | null {
+        if (this.targetItemType === ItemType.None) return null;
+
+        const scene = this.node.scene;
+        if (!scene) return null;
+
+        const items = scene.getComponentsInChildren(Item);
+        const myWorldPos = this.node.worldPosition;
+        const myPoint = new Vec2(myWorldPos.x, myWorldPos.y);
+
+        for (let i = 0; i < items.length; i++) {
+            const otherItem = items[i];
+            if (!otherItem || otherItem.node === this.node || !otherItem.node.activeInHierarchy) continue;
+            if (otherItem.itemType !== this.targetItemType) continue;
+
+            const uiTransform = otherItem.getComponent(UITransform);
+            if (uiTransform) {
+                const boundingBox = uiTransform.getBoundingBoxToWorld();
+                if (boundingBox.contains(myPoint)) {
+                    return otherItem.node;
+                }
+            } else {
+                const otherWorldPos = otherItem.node.worldPosition;
+                const dist = Vec2.distance(myPoint, new Vec2(otherWorldPos.x, otherWorldPos.y));
+                if (dist < 100) {
+                    return otherItem.node;
+                }
+            }
+        }
+        return null;
     }
 
     public TeleportToStart() {
         this.isReturningToStart = false;
         this.isForceReturningToStart = false;
-        Tween.stopAllByTarget(this.node);
+        DOTween.Kill(this.node);
         this.ResetScale();
 
         const targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
             (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
 
-        this.node.setWorldPosition(targetPos);
+        this.node.setWorldPosition(targetPos.x, targetPos.y, this.node.worldPosition.z);
         this.RestoreOriginalParent();
     }
 
@@ -254,7 +295,7 @@ export class ItemDraggable extends Component {
     }
 
     private ResetScale() {
-        Tween.stopAllByTarget(this.node);
+        DOTween.Kill(this.node);
         this.node.setScale(this.originalScale);
     }
 

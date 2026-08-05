@@ -1,10 +1,11 @@
-import { _decorator, Component } from 'cc';
+import { _decorator } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
+import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
 
 const { ccclass } = _decorator;
 
 @ccclass('ItemSound')
-export class ItemSound extends Component {
+export class ItemSound extends Ply_EventHandlerComponent {
 
     public PlaySoundFX(fxType: FxType) {
         Ply_SoundManager.Ins.PlayFx(fxType);

@@ -1,8 +1,9 @@
 import { _decorator, Component } from 'cc';
+import { Ply_EventHandlerComponent } from './Ply_EventHandlerComponent';
 const { ccclass } = _decorator;
 
 @ccclass('Ply_Singleton')
-export class Ply_Singleton<T extends Component> extends Component {
+export class Ply_Singleton<T extends Component> extends Ply_EventHandlerComponent {
     public static Ins: any = null!;
 
     protected onLoad() {

@@ -1,11 +1,12 @@
-import { _decorator, Node, Sprite, SpriteFrame, Vec3, tween, Tween, Enum, Animation } from 'cc';
+import { _decorator, Node, Sprite, SpriteFrame, Vec2, Vec3, Enum, Animation, EventHandler, animation, SkeletalAnimation } from 'cc';
 import { Ply_GameUnit } from '../Tool/Ply_GameUnit';
 import { Ply_Pool, PoolType } from '../Tool/Ply_Pool';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
-import { Ply_Event } from '../Tool/Ply_Event';
 import { ComponentCache } from '../Tool/CacheComponent';
 import { ItemType } from './ItemType';
 import { HeartEffect } from '../Effect/HeartEffect';
+import { Ply_Event } from '../Tool/Ply_Event';
+import { DOTween, Ease } from '../Tool/DOTween';
 
 import { ItemDraggable } from './ItemDraggable';
 import { ItemClickable } from './ItemClickable';
@@ -33,7 +34,7 @@ export class Item extends Ply_GameUnit {
     @property(Sprite)
     public spriteRenderer: Sprite = null!;
 
-    @property({ type: Ply_Event })
+    @property({ type: Ply_Event, tooltip: 'Knife in event' })
     public onKnifeIn: Ply_Event = new Ply_Event();
 
     @property(Node)
@@ -143,29 +144,82 @@ export class Item extends Ply_GameUnit {
         }
     }
 
+    /**
+     * Play animation clip by index from cached Animation or SkeletalAnimation component
+     */
+    public PlayClipWithIndex(index: number) {
+        if (!this.animationComponent) {
+            this.animationComponent = this.getComponent(Animation) || this.getComponentInChildren(Animation);
+        }
+
+        if (this.animationComponent) {
+            const clips = this.animationComponent.clips;
+            if (clips && index >= 0 && index < clips.length && clips[index]) {
+                const clipName = clips[index]!.name;
+                this.animationComponent.play(clipName);
+                return;
+            }
+        }
+
+        const skelAnim = this.getComponent(SkeletalAnimation) || this.getComponentInChildren(SkeletalAnimation);
+        if (skelAnim) {
+            const clips = skelAnim.clips;
+            if (clips && index >= 0 && index < clips.length && clips[index]) {
+                skelAnim.play(clips[index]!.name);
+                return;
+            }
+        }
+
+        console.warn(`[Item] Animation clip at index ${index} not found on node "${this.node.name}"!`);
+    }
+
+    /**
+     * Set trigger / play animation state by name for AnimationController, Animation or SkeletalAnimation
+     */
+    public PlayTrigger(triggerName: string) {
+        if (!triggerName || triggerName.trim() === '') return;
+
+        // 1. Support AnimationController (Animation Graph in Cocos 3.x)
+        const animController = this.getComponent(animation.AnimationController) || this.getComponentInChildren(animation.AnimationController);
+        if (animController) {
+            animController.setValue(triggerName, true);
+            return;
+        }
+
+        // 2. Support standard Animation component
+        if (!this.animationComponent) {
+            this.animationComponent = this.getComponent(Animation) || this.getComponentInChildren(Animation);
+        }
+        if (this.animationComponent) {
+            this.animationComponent.play(triggerName);
+            return;
+        }
+
+        // 3. Support SkeletalAnimation component
+        const skelAnim = this.getComponent(SkeletalAnimation) || this.getComponentInChildren(SkeletalAnimation);
+        if (skelAnim) {
+            skelAnim.play(triggerName);
+        }
+    }
+
     public GetInPlate(plateNode: Node) {
         const time = 0.5;
-        const targetPos = plateNode.worldPosition;
+        const plateWorld = plateNode.worldPosition;
+        const targetPos = new Vec2(plateWorld.x, plateWorld.y);
 
-        // Jump & Rotate animation using tween
-        tween(this.node)
-            .to(time, { worldPosition: targetPos }, { easing: 'sineOut' })
-            .start();
+        DOTween.Kill(this.node);
+        DOTween.DOMove(this.node, targetPos, time).SetEase(Ease.OutSine);
 
-        tween(this.node)
-            .by(time, { eulerAngles: new Vec3(0, 0, -360) })
-            .call(() => {
+        const curEuler = this.node.eulerAngles;
+        DOTween.DORotate(this.node, new Vec3(curEuler.x, curEuler.y, curEuler.z - 360), time)
+            .SetEase(Ease.OutSine)
+            .OnComplete(() => {
                 Ply_SoundManager.Ins.PlayFx(FxType.Drop);
                 this.node.setParent(plateNode);
 
                 // Punch scale effect on plate
-                const originalScale = plateNode.scale.clone();
-                tween(plateNode)
-                    .to(0.1, { scale: new Vec3(originalScale.x * 1.1, originalScale.y * 0.9, originalScale.z) })
-                    .to(0.1, { scale: originalScale })
-                    .start();
-            })
-            .start();
+                DOTween.DOPunchScale(plateNode, 0.1, 0.2);
+            });
     }
 
     public KnifeIn() {

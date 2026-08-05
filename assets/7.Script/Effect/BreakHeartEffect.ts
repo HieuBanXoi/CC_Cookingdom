@@ -1,49 +1,41 @@
 import { _decorator, Vec3 } from 'cc';
 import { Ply_GameUnit } from '../Tool/Ply_GameUnit';
 import { Ply_Pool, PoolType } from '../Tool/Ply_Pool';
-import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
+import { FxType, Ply_SoundManager } from '../Tool/Ply_SoundManager';
 import { DOTween, Ease } from '../Tool/DOTween';
 
 const { ccclass, property } = _decorator;
 
-@ccclass('HeartEffect')
-export class HeartEffect extends Ply_GameUnit {
-
+/** Pooled broken-heart feedback displayed when an item drag fails. */
+@ccclass('BreakHeartEffect')
+export class BreakHeartEffect extends Ply_GameUnit {
     @property
-    public defaultLifeTime: number = 1.0;
+    public defaultLifeTime = 1.0;
 
-    private defaultScale: Vec3 = new Vec3(1, 1, 1);
-    private defaultLocalEulerAngles: Vec3 = new Vec3(0, 0, 0);
-    private isDefaultStateCached: boolean = false;
+    private defaultScale = new Vec3(1, 1, 1);
+    private defaultLocalEulerAngles = new Vec3(0, 0, 0);
+    private isDefaultStateCached = false;
 
-    /**
-     * Called automatically by Ply_Pool when despawned
-     */
-    public unuse() {
+    public unuse(): void {
         super.unuse();
-        this.ResetState();
+        this.resetState();
     }
 
-    public DeSpawnByTime() {
-        this.unschedule(this.DeSpawn);
-        this.scheduleOnce(this.DeSpawn, 3.0);
-    }
-
-    public PlaySpawnWithScale(scaleMultiplier: number) {
+    public PlaySpawnWithScale(scaleMultiplier: number): void {
         this.PlaySpawn(this.defaultLifeTime, scaleMultiplier);
     }
 
-    public PlaySpawn(lifeTime: number = this.defaultLifeTime, scaleMultiplier: number = 1.0) {
-        this.CacheDefaultState();
-        this.ResetState();
+    public PlaySpawn(lifeTime: number = this.defaultLifeTime, scaleMultiplier = 1.0): void {
+        this.cacheDefaultState();
+        this.resetState();
 
         this.node.setScale(Vec3.ZERO);
-        Ply_SoundManager.Ins.PlayFx(FxType.Complete);
+        Ply_SoundManager.Ins.PlayFx(FxType.Failed);
 
         const targetScale = new Vec3(
             this.defaultScale.x * Math.max(0, scaleMultiplier),
             this.defaultScale.y * Math.max(0, scaleMultiplier),
-            this.defaultScale.z * Math.max(0, scaleMultiplier)
+            this.defaultScale.z * Math.max(0, scaleMultiplier),
         );
 
         DOTween.Kill(this.node);
@@ -56,25 +48,22 @@ export class HeartEffect extends Ply_GameUnit {
         this.scheduleOnce(this.DeSpawn, lifeTime);
     }
 
-    public DeSpawn() {
-        this.ResetState();
-        Ply_Pool.Ins.despawn(PoolType.HeartFX, this.node);
+    public DeSpawn(): void {
+        this.resetState();
+        Ply_Pool.Ins.despawn(PoolType.BreakHeartFX, this.node);
     }
 
-    private CacheDefaultState() {
+    private cacheDefaultState(): void {
         if (this.isDefaultStateCached) return;
 
         if (this.node.scale.x !== 0 && this.node.scale.y !== 0) {
             Vec3.copy(this.defaultScale, this.node.scale);
-        } else {
-            this.defaultScale.set(1, 1, 1);
         }
-
         Vec3.copy(this.defaultLocalEulerAngles, this.node.eulerAngles);
         this.isDefaultStateCached = true;
     }
 
-    private ResetState() {
+    private resetState(): void {
         this.unschedule(this.DeSpawn);
         DOTween.Kill(this.node);
 

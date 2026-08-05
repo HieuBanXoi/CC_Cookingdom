@@ -7,7 +7,9 @@ const { ccclass, property } = _decorator;
 
 export enum PoolType {
     Test = 0,
-    HeartFX
+    HeartFX,
+    BreakHeartFX
+
 }
 Enum(PoolType);
 

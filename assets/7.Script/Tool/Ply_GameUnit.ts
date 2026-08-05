@@ -1,4 +1,5 @@
-import { _decorator, Component, Node } from 'cc';
+import { _decorator, Node } from 'cc';
+import { Ply_EventHandlerComponent } from './Ply_EventHandlerComponent';
 const { ccclass } = _decorator;
 
 /**
@@ -6,7 +7,7 @@ const { ccclass } = _decorator;
  * Inherit this class to automatically handle pool lifecycle methods.
  */
 @ccclass('Ply_GameUnit')
-export class Ply_GameUnit extends Component {
+export class Ply_GameUnit extends Ply_EventHandlerComponent {
     /**
      * Transform property for Unity compatibility.
      * In Cocos Creator, this.node represents the Transform.

@@ -2,12 +2,12 @@
   "ver": "2.0.3",
   "importer": "animation-clip",
   "imported": true,
-  "uuid": "32697024-3710-410b-88fc-ac0e515726a6",
+  "uuid": "cb61bcb7-ede2-4ec7-bf6f-5efa9ac2059a",
   "files": [
     ".cconb"
   ],
   "subMetas": {},
   "userData": {
-    "name": "SpoonUp"
+    "name": "SpoonDropFailed"
   }
 }

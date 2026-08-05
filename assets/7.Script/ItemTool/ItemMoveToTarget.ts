@@ -1,7 +1,8 @@
-import { _decorator, Component, Node, Vec3, tween, Tween, Enum } from 'cc';
-import { Ply_Event } from '../Tool/Ply_Event';
+import { _decorator, Node, Vec2, Vec3, Enum, EventHandler } from 'cc';
 import { GameManager } from '../Manager/GameManager';
 import { Item } from './Item';
+import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
+import { DOTween, Ease } from '../Tool/DOTween';
 
 const { ccclass, property } = _decorator;
 
@@ -14,7 +15,7 @@ export enum MoveType {
 Enum(MoveType);
 
 @ccclass('ItemMoveToTarget')
-export class ItemMoveToTarget extends Component {
+export class ItemMoveToTarget extends Ply_EventHandlerComponent {
 
     @property(Node)
     public defaultTarget: Node = null!;
@@ -25,8 +26,8 @@ export class ItemMoveToTarget extends Component {
     @property({ type: Enum(MoveType) })
     public moveType: MoveType = MoveType.Smooth;
 
-    @property
-    public jumpPower: number = 2.0;
+    @property({ tooltip: 'Độ cao cung nhảy UI theo pixel. Nên dùng khoảng 80-200.' })
+    public jumpPower: number = 120;
 
     @property
     public numJumps: number = 1;
@@ -49,8 +50,8 @@ export class ItemMoveToTarget extends Component {
     @property
     public setParentToTarget: boolean = false;
 
-    @property({ type: Ply_Event })
-    public onComplete: Ply_Event = new Ply_Event();
+    @property({ type: [EventHandler], tooltip: 'On move complete event handlers' })
+    public onComplete: EventHandler[] = [];
 
     @property
     public lockInputWhileMoving: boolean = true;
@@ -67,23 +68,30 @@ export class ItemMoveToTarget extends Component {
     }
 
     public ExecuteMove() {
-        this.ExecuteMove3D(this.defaultTarget);
+        this.ExecuteMove2D(this.defaultTarget);
     }
 
+    /** Kept for existing EventHandler bindings. Movement is now UI 2D. */
     public ExecuteMove3D(customTarget: Node | null) {
+        this.ExecuteMove2D(customTarget);
+    }
+
+    public ExecuteMove2D(customTarget: Node | null) {
         const target = customTarget || this.defaultTarget;
         if (!target || !target.isValid) {
             console.warn(`[ItemMoveToTarget] Target not found for ${this.node.name}!`);
             return;
         }
 
-        const targetPos = target.worldPosition.clone();
+        const targetWorld = target.worldPosition;
+        const targetPos = new Vec2(targetWorld.x, targetWorld.y);
         const targetItem = target.getComponent(Item);
         if (targetItem && targetItem.knifePos) {
-            targetPos.set(targetItem.knifePos.worldPosition);
+            const knifeWorld = targetItem.knifePos.worldPosition;
+            targetPos.set(knifeWorld.x, knifeWorld.y);
         }
 
-        Tween.stopAllByTarget(this.node);
+        DOTween.Kill(this.node);
 
         if (this.resetParentBeforeMove && this.originalParent && this.originalParent.isValid) {
             this.node.setParent(this.originalParent);
@@ -95,54 +103,59 @@ export class ItemMoveToTarget extends Component {
 
         if (this.scaleOnMove) {
             const targetScale = this.node.scale.clone().multiplyScalar(this.endScaleMultiplier);
-            tween(this.node)
-                .to(this.duration, { scale: targetScale }, { easing: 'quadOut' })
-                .start();
+            DOTween.DOScale(this.node, targetScale, this.duration).SetEase(Ease.OutQuad);
         }
 
         switch (this.moveType) {
             case MoveType.Smooth:
-                tween(this.node)
-                    .to(this.duration, { worldPosition: targetPos }, { easing: 'quadOut' })
-                    .call(() => this.FinishAction())
-                    .start();
+                DOTween.DOMove(this.node, targetPos, this.duration)
+                    .SetEase(Ease.OutQuad)
+                    .OnComplete(() => this.FinishAction(target));
                 break;
 
             case MoveType.Jump:
-                tween(this.node)
-                    .to(this.duration, { worldPosition: targetPos }, { easing: 'sineOut' })
-                    .call(() => this.FinishAction())
-                    .start();
+                DOTween.DOJump(this.node, targetPos, this.jumpPower, this.numJumps, this.duration)
+                    .SetEase(Ease.OutSine)
+                    .OnComplete(() => this.FinishAction(target));
 
                 if (this.rotate360DuringJump) {
                     const rotAngle = this.flipRotate ? -this.angleRotate : this.angleRotate;
-                    tween(this.node)
-                        .by(this.duration, { eulerAngles: new Vec3(0, 0, rotAngle) })
-                        .start();
+                    const curEuler = this.node.eulerAngles;
+                    DOTween.DORotate(this.node, new Vec3(curEuler.x, curEuler.y, curEuler.z + rotAngle), this.duration)
+                        .SetEase(Ease.OutSine);
                 }
                 break;
 
             case MoveType.Instant:
-                this.node.setWorldPosition(targetPos);
-                this.FinishAction();
+                this.node.setWorldPosition(targetPos.x, targetPos.y, this.node.worldPosition.z);
+                this.FinishAction(target);
                 break;
 
             case MoveType.ShakeThenMove:
-                const origPos = this.node.worldPosition.clone();
-                tween(this.node)
-                    .to(0.1, { worldPosition: new Vec3(origPos.x + 10, origPos.y, origPos.z) })
-                    .to(0.1, { worldPosition: new Vec3(origPos.x - 10, origPos.y, origPos.z) })
-                    .to(0.1, { worldPosition: origPos })
-                    .to(this.duration, { worldPosition: targetPos }, { easing: 'quadOut' })
-                    .call(() => this.FinishAction())
-                    .start();
+                const currentWorld = this.node.worldPosition;
+                const origPos = new Vec2(currentWorld.x, currentWorld.y);
+                DOTween.Sequence()
+                    .Append(DOTween.DOMove(this.node, new Vec2(origPos.x + 10, origPos.y), 0.1))
+                    .Append(DOTween.DOMove(this.node, new Vec2(origPos.x - 10, origPos.y), 0.1))
+                    .Append(DOTween.DOMove(this.node, origPos, 0.1))
+                    .Append(DOTween.DOMove(this.node, targetPos, this.duration).SetEase(Ease.OutQuad))
+                    .OnComplete(() => this.FinishAction(target));
                 break;
         }
     }
 
-    private FinishAction() {
-        if (this.setParentToTarget && this.defaultTarget && this.defaultTarget.isValid) {
-            this.node.setParent(this.defaultTarget);
+    private FinishAction(targetNode?: Node | null) {
+        const target = targetNode || this.defaultTarget;
+
+        if (this.setParentToTarget && target && target.isValid) {
+            const currentWorldPos = this.node.worldPosition.clone();
+            const currentWorldScale = this.node.worldScale.clone();
+            const currentWorldRotation = this.node.worldRotation.clone();
+
+            this.node.setParent(target);
+            this.node.setWorldPosition(currentWorldPos);
+            this.node.setWorldScale(currentWorldScale);
+            this.node.setWorldRotation(currentWorldRotation);
         }
 
         if (this.lockInputWhileMoving && GameManager.Ins) {
@@ -153,12 +166,13 @@ export class ItemMoveToTarget extends Component {
             this.item.PlayMoveToTargetFinishSound();
         }
 
-        this.onComplete.invoke();
+        EventHandler.emitEvents(this.onComplete);
     }
 
     public TeleportToTarget(t: Node) {
         if (t && t.isValid) {
-            this.node.setWorldPosition(t.worldPosition);
+            const target = t.worldPosition;
+            this.node.setWorldPosition(target.x, target.y, this.node.worldPosition.z);
         }
     }
 
