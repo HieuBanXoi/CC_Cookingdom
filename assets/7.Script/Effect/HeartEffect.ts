@@ -1,0 +1,92 @@
+import { _decorator, Vec3, tween, Tween } from 'cc';
+import { Ply_GameUnit } from '../Tool/Ply_GameUnit';
+import { Ply_Pool, PoolType } from '../Tool/Ply_Pool';
+import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
+
+const { ccclass, property } = _decorator;
+
+@ccclass('HeartEffect')
+export class HeartEffect extends Ply_GameUnit {
+
+    @property
+    public defaultLifeTime: number = 1.0;
+
+    private defaultScale: Vec3 = new Vec3(1, 1, 1);
+    private defaultLocalEulerAngles: Vec3 = new Vec3(0, 0, 0);
+    private isDefaultStateCached: boolean = false;
+    private currentTween: Tween<any> | null = null;
+
+    /**
+     * Called automatically by Ply_Pool when despawned
+     */
+    public unuse() {
+        super.unuse();
+        this.ResetState();
+    }
+
+    public DeSpawnByTime() {
+        this.unschedule(this.DeSpawn);
+        this.scheduleOnce(this.DeSpawn, 3.0);
+    }
+
+    public PlaySpawnWithScale(scaleMultiplier: number) {
+        this.PlaySpawn(this.defaultLifeTime, scaleMultiplier);
+    }
+
+    public PlaySpawn(lifeTime: number = this.defaultLifeTime, scaleMultiplier: number = 1.0) {
+        this.CacheDefaultState();
+        this.ResetState();
+
+        this.node.setScale(Vec3.ZERO);
+        Ply_SoundManager.Ins.PlayFx(FxType.Complete);
+
+        const targetScale = new Vec3(
+            this.defaultScale.x * Math.max(0, scaleMultiplier),
+            this.defaultScale.y * Math.max(0, scaleMultiplier),
+            this.defaultScale.z * Math.max(0, scaleMultiplier)
+        );
+
+        this.currentTween = tween(this.node)
+            .to(0.25, { scale: targetScale }, { easing: 'backOut' })
+            .to(0.12, { eulerAngles: new Vec3(0, 0, 3) }, { easing: 'sineOut' })
+            .to(0.18, { eulerAngles: new Vec3(0, 0, -3) }, { easing: 'sineInOut' })
+            .to(0.12, { eulerAngles: this.defaultLocalEulerAngles }, { easing: 'sineIn' })
+            .start();
+
+        this.scheduleOnce(this.DeSpawn, lifeTime);
+    }
+
+    public DeSpawn() {
+        this.ResetState();
+        Ply_Pool.Ins.despawn(PoolType.HeartFX, this.node);
+    }
+
+    private CacheDefaultState() {
+        if (this.isDefaultStateCached) return;
+
+        if (this.node.scale.x !== 0 && this.node.scale.y !== 0) {
+            Vec3.copy(this.defaultScale, this.node.scale);
+        } else {
+            this.defaultScale.set(1, 1, 1);
+        }
+
+        Vec3.copy(this.defaultLocalEulerAngles, this.node.eulerAngles);
+        this.isDefaultStateCached = true;
+    }
+
+    private ResetState() {
+        this.unschedule(this.DeSpawn);
+
+        if (this.currentTween) {
+            this.currentTween.stop();
+            this.currentTween = null;
+        }
+
+        Tween.stopAllByTarget(this.node);
+
+        if (this.isDefaultStateCached) {
+            this.node.setScale(this.defaultScale);
+            this.node.eulerAngles = this.defaultLocalEulerAngles;
+        }
+    }
+}
