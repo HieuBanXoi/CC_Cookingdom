@@ -608,7 +608,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 14
     },
@@ -683,7 +683,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-003",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -789,7 +789,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-004",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -895,7 +895,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-005",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1001,7 +1001,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-007",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1107,7 +1107,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-009",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1213,7 +1213,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1319,7 +1319,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-001",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1425,7 +1425,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-002",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1531,7 +1531,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-006",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },
@@ -1637,7 +1637,7 @@
   {
     "__type__": "cc.Node",
     "_name": "BG-008",
-    "_objFlags": 0,
+    "_objFlags": 512,
     "_parent": {
       "__id__": 17
     },

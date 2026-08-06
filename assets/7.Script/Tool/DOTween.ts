@@ -790,7 +790,11 @@ export class DOTween {
     public static Kill(targetOrId: unknown, complete = false): number {
         let count = 0;
         for (const tween of [...this.activeTweens]) {
-            if (tween.target === targetOrId || tween.Id() === targetOrId) {
+            if (!this.isManagedTween(tween)) {
+                this.activeTweens.delete(tween);
+                continue;
+            }
+            if (tween.target === targetOrId || tween.Id?.() === targetOrId) {
                 tween.Kill(complete);
                 count++;
             }
@@ -803,10 +807,17 @@ export class DOTween {
     public static Restart(targetOrId: unknown): number { return this.applyControl(targetOrId, tween => tween.Restart()); }
 
     public static KillAll(complete = false): void {
-        for (const tween of [...this.activeTweens]) tween.Kill(complete);
+        for (const tween of [...this.activeTweens]) {
+            if (this.isManagedTween(tween)) tween.Kill(complete);
+            else this.activeTweens.delete(tween);
+        }
     }
 
     public static register(tween: TweenBase): void {
+        if (!this.isManagedTween(tween)) {
+            console.warn('[DOTween] Ignored an invalid tween registration.', tween);
+            return;
+        }
         if (tween.IsComplete()) return;
         this.activeTweens.add(tween);
         this.ensureHook();
@@ -828,18 +839,36 @@ export class DOTween {
         const unscaledDelta = Math.min(0.1, Math.max(0, (now - this.lastRealTime) / 1000));
         this.lastRealTime = now;
         const scaledDelta = Math.min(0.1, Math.max(0, director.getDeltaTime()));
-        for (const tween of [...this.activeTweens]) tween._update(scaledDelta, unscaledDelta);
+        for (const tween of [...this.activeTweens]) {
+            if (this.isManagedTween(tween)) tween._update(scaledDelta, unscaledDelta);
+            else {
+                this.activeTweens.delete(tween);
+                console.warn('[DOTween] Removed an invalid active tween.', tween);
+            }
+        }
     }
 
     private static applyControl(targetOrId: unknown, action: (tween: TweenBase) => void): number {
         let count = 0;
         for (const tween of [...this.activeTweens]) {
-            if (tween.target === targetOrId || tween.Id() === targetOrId) {
+            if (!this.isManagedTween(tween)) {
+                this.activeTweens.delete(tween);
+                continue;
+            }
+            if (tween.target === targetOrId || tween.Id?.() === targetOrId) {
                 action(tween);
                 count++;
             }
         }
         return count;
+    }
+
+    private static isManagedTween(tween: unknown): tween is TweenBase {
+        if (typeof tween !== 'object' || tween === null) return false;
+        const candidate = tween as TweenBase;
+        return typeof candidate._update === 'function'
+            && typeof candidate.Kill === 'function'
+            && typeof candidate.IsComplete === 'function';
     }
 }
 

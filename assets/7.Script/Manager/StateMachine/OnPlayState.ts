@@ -12,6 +12,5 @@ export class OnPlayState implements IGameState {
 
     public OnExit(gameManager: GameManager): void {
         gameManager.isPlaying = false;
-        UIManager.Ins.SetDownloadButtonsInteractable(false);
     }
 }

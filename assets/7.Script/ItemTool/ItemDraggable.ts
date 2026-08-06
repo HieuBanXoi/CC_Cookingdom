@@ -1,4 +1,4 @@
-import { _decorator, Node, Vec2, Vec3, Enum, input, Input, EventTouch, UITransform } from 'cc';
+import { _decorator, Node, Vec2, Vec3, Enum, EventTouch, UITransform } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { InputManager } from './InputManager';
@@ -127,22 +127,20 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         }
 
         this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        // The item is re-parented to DraggingNode as soon as a drag begins.
-        // Listen globally afterwards so Web Mobile does not lose move/end events
-        // when that hierarchy change occurs.
-        input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
-        input.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        this.node.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.node.on(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
     protected onDestroy() {
         this.node.off(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
-        input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        this.node.off(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.node.off(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
     private onTouchStart(event: EventTouch) {
+        console.log("onTouchStart");
         this.BeginDrag();
     }
 
@@ -163,6 +161,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     public BeginDrag(): boolean {
+        console.log("BeginDrag");
         if (!GameManager.Ins?.IsPlaying() || !this.CanDrag()) return false;
 
         DOTween.Kill(this.node);
