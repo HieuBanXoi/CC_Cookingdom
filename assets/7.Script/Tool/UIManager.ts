@@ -1,4 +1,4 @@
-import { _decorator, Component, Node, Camera, view, screen } from 'cc';
+import { _decorator, Component, Node, Camera, view, screen, Button } from 'cc';
 import { Ply_Singleton } from './Ply_Singleton';
 
 const { ccclass, property } = _decorator;
@@ -10,9 +10,7 @@ export class UIManager extends Ply_Singleton<UIManager> {
     @property(Node) public loseUI: Node = null!;
     @property(Node) public tutorial: Node = null!;
     @property(Node) public verticalUI: Node = null!;
-    @property(Node) public horizontalUI: Node = null!;
     @property(Node) public downloadBtn: Node = null!;
-    @property(Node) public horizontalDownloadBtn: Node = null!;
     @property(Camera) public cam: Camera = null!;
 
     @property({ tooltip: 'Hide download button for Google builds' })
@@ -26,7 +24,6 @@ export class UIManager extends Ply_Singleton<UIManager> {
     public isScreenVertical: boolean = false;
 
     // --- ORIENTATION & SCALING SETTINGS ---
-    @property public verticalUIHeightOnWidthRatio: number = 0.6;
     @property public screenVerticalHeightOnWidthRatio: number = 1.0;
     @property public baseOrthographicSize: number = 6.0;
     @property public baseAspect: number = 1.777;
@@ -78,13 +75,11 @@ export class UIManager extends Ply_Singleton<UIManager> {
 
     private getScreenType() {
         this.scaleHeightOnWidth = this.getScreenHeightOnWidthRatio();
-        this.isVertical = this.scaleHeightOnWidth >= this.verticalUIHeightOnWidthRatio;
         this.isScreenVertical = this.scaleHeightOnWidth >= this.screenVerticalHeightOnWidthRatio;
     }
 
     private screenScale() {
-        if (this.verticalUI) this.verticalUI.active = this.isVertical;
-        if (this.horizontalUI) this.horizontalUI.active = !this.isVertical;
+        if (this.verticalUI) this.verticalUI.active = true;
 
         const targetOrthographicSize = Math.max(this.getTargetOrthographicSize(), 0.01);
         this.applyCameraScale(targetOrthographicSize);
@@ -133,24 +128,7 @@ export class UIManager extends Ply_Singleton<UIManager> {
 
         if (this.downloadBtn) this.downloadBtn.active = isActive;
 
-        if (!this.horizontalDownloadBtn && this.horizontalUI) {
-            this.horizontalDownloadBtn = this.findChildByName(this.horizontalUI, 'DownloadBtn');
-        }
-
-        if (this.horizontalDownloadBtn && this.horizontalDownloadBtn !== this.downloadBtn) {
-            this.horizontalDownloadBtn.active = isActive;
-        }
     }
 
-    private findChildByName(root: Node, childName: string): Node | null {
-        if (!root) return null;
-        if (root.name === childName) return root;
 
-        for (const child of root.children) {
-            const found = this.findChildByName(child, childName);
-            if (found) return found;
-        }
-
-        return null;
-    }
 }

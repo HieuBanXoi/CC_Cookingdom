@@ -2,6 +2,7 @@ import { _decorator, Node, Vec2, Enum, EventTouch } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
+import { GameManager } from '../Manager/GameManager';
 
 const { ccclass, property } = _decorator;
 
@@ -77,6 +78,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
     }
 
     private onTouchStart(event: EventTouch) {
+        if (!GameManager.Ins?.IsPlaying()) return;
         this.BeginStir(event);
     }
 
@@ -89,7 +91,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
     }
 
     public BeginStir(event?: EventTouch) {
-        if (this.isDone || !this.enabled) return;
+        if (!GameManager.Ins?.IsPlaying() || this.isDone || !this.enabled) return;
         this.isStirring = true;
 
         if (event) {

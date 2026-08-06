@@ -6,6 +6,7 @@ import { OnPlayState } from './StateMachine/OnPlayState';
 import { WinState } from './StateMachine/WinState';
 import { LoseState } from './StateMachine/LoseState';
 import '../Tool/DOTween';
+import { GameController } from '../Tool/GameController';
 
 const { ccclass, property } = _decorator;
 
@@ -31,10 +32,12 @@ export class GameManager extends Ply_Singleton<GameManager> {
     public currentLayer: number = 0;
 
     private currentState: IGameState | null = null;
+    private preventNativeTouch: ((event: TouchEvent) => void) | null = null;
 
     protected onLoad() {
         super.onLoad();
         input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.disableBrowserTouchGestures();
     }
 
     protected start() {
@@ -49,12 +52,29 @@ export class GameManager extends Ply_Singleton<GameManager> {
 
     protected onDestroy() {
         input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+
+        if (this.preventNativeTouch && typeof document !== 'undefined') {
+            const canvas = document.getElementById('GameCanvas');
+            canvas?.removeEventListener('touchmove', this.preventNativeTouch);
+        }
     }
 
     private onTouchEnd(event: EventTouch) {
         if (this.isGotoStore) {
             this.GotoStore();
         }
+    }
+
+    /** Prevent the mobile browser from turning a drag into a page gesture. */
+    private disableBrowserTouchGestures() {
+        if (typeof document === 'undefined') return;
+
+        const canvas = document.getElementById('GameCanvas');
+        if (!canvas) return;
+
+        canvas.style.touchAction = 'none';
+        this.preventNativeTouch = (event: TouchEvent) => event.preventDefault();
+        canvas.addEventListener('touchmove', this.preventNativeTouch, { passive: false });
     }
 
     public ChangeState(newState: IGameState) {
@@ -81,7 +101,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
      * Redirect to store (Left empty for user to implement)
      */
     public GotoStore() {
-        console.log("Redirecting to store...");
+        GameController.redirectToStore();
     }
 
     public MoveOne() {
@@ -100,12 +120,14 @@ export class GameManager extends Ply_Singleton<GameManager> {
     }
 
     public WinGame() {
+        console.log("GameManager: WinGame called");
         this.isLoseGame = false;
         this.isPlaying = false;
         this.ChangeState(new WinState());
     }
 
     public LoseGame() {
+        console.log("GameManager: LoseGame called");
         this.isLoseGame = true;
         this.isPlaying = false;
         this.ChangeState(new LoseState());

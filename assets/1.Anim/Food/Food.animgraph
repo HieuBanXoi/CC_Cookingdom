@@ -298,7 +298,7 @@
     ],
     "duration": 0.3,
     "relativeDuration": false,
-    "exitConditionEnabled": false,
+    "exitConditionEnabled": true,
     "destinationStart": 0,
     "relativeDestinationStart": false,
     "interruptionSource": 0,
@@ -328,7 +328,7 @@
     ],
     "duration": 0.3,
     "relativeDuration": false,
-    "exitConditionEnabled": false,
+    "exitConditionEnabled": true,
     "destinationStart": 0,
     "relativeDestinationStart": false,
     "interruptionSource": 0,
@@ -358,11 +358,11 @@
     ],
     "duration": 0.3,
     "relativeDuration": false,
-    "exitConditionEnabled": false,
+    "exitConditionEnabled": true,
     "destinationStart": 0,
     "relativeDestinationStart": false,
     "interruptionSource": 0,
-    "_exitCondition": 0
+    "_exitCondition": 1
   },
   {
     "__type__": "cc.animation.TriggerCondition",
@@ -388,7 +388,7 @@
     ],
     "duration": 0.3,
     "relativeDuration": false,
-    "exitConditionEnabled": false,
+    "exitConditionEnabled": true,
     "destinationStart": 0,
     "relativeDestinationStart": false,
     "interruptionSource": 0,
@@ -418,7 +418,7 @@
     ],
     "duration": 0.3,
     "relativeDuration": false,
-    "exitConditionEnabled": false,
+    "exitConditionEnabled": true,
     "destinationStart": 0,
     "relativeDestinationStart": false,
     "interruptionSource": 0,
@@ -430,7 +430,11 @@
   },
   {
     "__type__": "cc.animation.Transition",
-    "__editorExtras__": null,
+    "__editorExtras__": {
+      "name": "",
+      "id": "17859884843680.3301930865129006",
+      "clone": null
+    },
     "from": {
       "__id__": 3
     },
@@ -441,7 +445,11 @@
   },
   {
     "__type__": "cc.animation.AnimationTransition",
-    "__editorExtras__": null,
+    "__editorExtras__": {
+      "name": "",
+      "id": "17859884843680.05861170412984129",
+      "clone": null
+    },
     "from": {
       "__id__": 14
     },

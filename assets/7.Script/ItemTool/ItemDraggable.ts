@@ -1,15 +1,18 @@
-import { _decorator, Component, Node, Vec2, Vec3, Enum, input, Input, EventTouch, UITransform, Rect } from 'cc';
+import { _decorator, Node, Vec2, Vec3, Enum, input, Input, EventTouch, UITransform } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { InputManager } from './InputManager';
 import { ItemType } from './ItemType';
 import { Item } from './Item';
 import { DOTween, Ease } from '../Tool/DOTween';
+import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
+import { ComponentCache } from '../Tool/CacheComponent';
+import { GameManager } from '../Manager/GameManager';
 
 const { ccclass, property } = _decorator;
 
 @ccclass('ItemDraggable')
-export class ItemDraggable extends Component {
+export class ItemDraggable extends Ply_EventHandlerComponent {
 
     @property
     public isDraggable: boolean = true;
@@ -111,7 +114,7 @@ export class ItemDraggable extends Component {
         Vec3.copy(this.originalScale, this.node.scale);
         Vec3.copy(this.originalWorldPos, this.node.worldPosition);
 
-        // Ensure node has a valid UITransform for touch events
+        // Ensure node has a valid UITransform for touch events.
         let uiTransform = this.getComponent(UITransform);
         if (!uiTransform) {
             uiTransform = this.addComponent(UITransform);
@@ -124,16 +127,19 @@ export class ItemDraggable extends Component {
         }
 
         this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        this.node.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.node.on(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        // The item is re-parented to DraggingNode as soon as a drag begins.
+        // Listen globally afterwards so Web Mobile does not lose move/end events
+        // when that hierarchy change occurs.
+        input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        input.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
     protected onDestroy() {
         this.node.off(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        this.node.off(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.node.off(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
     private onTouchStart(event: EventTouch) {
@@ -142,9 +148,14 @@ export class ItemDraggable extends Component {
 
     private onTouchMove(event: EventTouch) {
         if (!this.isDraggingSession) return;
+
         const uiDelta = event.getUIDelta();
-        const curPos = this.node.worldPosition.clone();
-        this.node.setWorldPosition(new Vec3(curPos.x + uiDelta.x, curPos.y + uiDelta.y, curPos.z));
+        const currentPosition = this.node.worldPosition;
+        this.node.setWorldPosition(
+            currentPosition.x + uiDelta.x,
+            currentPosition.y + uiDelta.y,
+            currentPosition.z
+        );
     }
 
     private onTouchEnd(event: EventTouch) {
@@ -152,7 +163,7 @@ export class ItemDraggable extends Component {
     }
 
     public BeginDrag(): boolean {
-        if (!this.CanDrag()) return false;
+        if (!GameManager.Ins?.IsPlaying() || !this.CanDrag()) return false;
 
         DOTween.Kill(this.node);
         this.isReturningToStart = false;
@@ -164,6 +175,8 @@ export class ItemDraggable extends Component {
         if (this.node.parent && (!InputManager.Ins || this.node.parent !== InputManager.Ins.draggingNode)) {
             this.originalParent = this.node.parent;
             this.originalSiblingIndex = this.node.getSiblingIndex();
+            Vec3.copy(this.originalLocalPos, this.node.position);
+            Vec3.copy(this.originalWorldPos, this.node.worldPosition);
         }
 
         // Move to InputManager.Ins.draggingNode to display on top of other elements
@@ -194,9 +207,12 @@ export class ItemDraggable extends Component {
             this.onDropFail.invoke();
             if (!this.consumeCurrentDropFail) {
                 if (this.returnToStartOnDragFailed) {
-                    this.ReturnToStart(this.spawnBreakHeartOnDropFail);
+                    // A failed drop always returns with the break-heart effect.
+                    // ReturnToStartWithoutHeart remains available for explicit
+                    // gameplay events that need a silent/manual return.
+                    this.ReturnToStart(true);
                 } else {
-                    this.FinalizeFailedDrag(this.spawnBreakHeartOnDropFail);
+                    this.FinalizeFailedDrag(true);
                 }
             } else {
                 this.SetShadowActive(true);
@@ -215,6 +231,17 @@ export class ItemDraggable extends Component {
         this.isReturningToStart = true;
         DOTween.Kill(this.node);
 
+        // A canvas resize/orientation change updates the original parent's
+        // transform. Returning to the world position cached in onLoad would
+        // therefore use the old canvas coordinate system on Web.
+        if (!this.hasCachedReturnPosition && !this.returnTransform && this.originalParent?.isValid) {
+            this.RestoreOriginalParent();
+            DOTween.DOLocalMove(this.node, this.originalLocalPos, 0.3)
+                .SetEase(Ease.OutQuart)
+                .OnComplete(() => this.OnReturnToStartComplete());
+            return;
+        }
+
         const targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
             (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
 
@@ -223,9 +250,12 @@ export class ItemDraggable extends Component {
             .OnComplete(() => this.OnReturnToStartComplete());
     }
 
-    /**
-     * Finds an active Item under the dropped item's center whose type matches targetItemType
-     */
+    /** Returns the item to its start position without spawning a failed-drag heart. */
+    public ReturnToStartWithoutHeart() {
+        this.ReturnToStart(false);
+    }
+
+    /** Finds an active Item under the dropped item's center whose type matches targetItemType. */
     private FindMatchingDropTarget(): Node | null {
         if (this.targetItemType === ItemType.None) return null;
 
@@ -234,27 +264,30 @@ export class ItemDraggable extends Component {
 
         const items = scene.getComponentsInChildren(Item);
         const myWorldPos = this.node.worldPosition;
-        const myPoint = new Vec2(myWorldPos.x, myWorldPos.y);
 
         for (let i = 0; i < items.length; i++) {
             const otherItem = items[i];
             if (!otherItem || otherItem.node === this.node || !otherItem.node.activeInHierarchy) continue;
             if (otherItem.itemType !== this.targetItemType) continue;
 
-            const uiTransform = otherItem.getComponent(UITransform);
-            if (uiTransform) {
-                const boundingBox = uiTransform.getBoundingBoxToWorld();
-                if (boundingBox.contains(myPoint)) {
-                    return otherItem.node;
-                }
-            } else {
-                const otherWorldPos = otherItem.node.worldPosition;
-                const dist = Vec2.distance(myPoint, new Vec2(otherWorldPos.x, otherWorldPos.y));
-                if (dist < 100) {
-                    return otherItem.node;
-                }
+            const targetTransform = otherItem.getComponent(UITransform);
+            if (!targetTransform) continue;
+
+            // Convert the dragged item's pivot (its center) into the target's
+            // local UI space, then require it to be inside the target's exact
+            // UITransform width/height. No distance-based fallback is allowed.
+            const localPoint = targetTransform.convertToNodeSpaceAR(myWorldPos);
+            const left = -targetTransform.anchorX * targetTransform.width;
+            const right = left + targetTransform.width;
+            const bottom = -targetTransform.anchorY * targetTransform.height;
+            const top = bottom + targetTransform.height;
+
+            if (localPoint.x >= left && localPoint.x <= right
+                && localPoint.y >= bottom && localPoint.y <= top) {
+                return otherItem.node;
             }
         }
+
         return null;
     }
 
@@ -263,6 +296,12 @@ export class ItemDraggable extends Component {
         this.isForceReturningToStart = false;
         DOTween.Kill(this.node);
         this.ResetScale();
+
+        if (!this.hasCachedReturnPosition && !this.returnTransform && this.originalParent?.isValid) {
+            this.RestoreOriginalParent();
+            this.node.setPosition(this.originalLocalPos);
+            return;
+        }
 
         const targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
             (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
@@ -285,13 +324,27 @@ export class ItemDraggable extends Component {
     }
 
     public CanDrag(): boolean {
-        if (!this.enabled || !this.isDraggable) return false;
+        // Do not start a new drag while this item is tweening back after a
+        // failed drop. Otherwise onBeginDrag events can be invoked repeatedly
+        // by rapid taps (for example Spoon triggering Food's "Get" animation).
+        if (!this.enabled || !this.isDraggable || this.isReturningToStart) return false;
         
         // Auto-heal stuck returning flags if not currently tweening
         if (this.isForceReturningToStart && !this.isDraggingSession) {
             this.isForceReturningToStart = false;
         }
         return true;
+    }
+
+    /** Sets the accepted drop type from the Item component on the supplied node. */
+    public SetTargetItemType(target: Node | null) {
+        const targetItem = target ? ComponentCache.get(target, Item) : null;
+        if (!targetItem) {
+            console.warn(`[ItemDraggable] Item component not found on target for ${this.node.name}.`);
+            return;
+        }
+        this.item.itemMoveToTarget.defaultTarget = target;
+        this.targetItemType = targetItem.itemType;
     }
 
     private ResetScale() {

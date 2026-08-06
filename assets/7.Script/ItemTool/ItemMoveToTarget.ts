@@ -17,6 +17,9 @@ Enum(MoveType);
 @ccclass('ItemMoveToTarget')
 export class ItemMoveToTarget extends Ply_EventHandlerComponent {
 
+    /** Emitted on this node after a move has completed. The target Node is passed as the event argument. */
+    public static readonly EVENT_COMPLETE = 'item-move-to-target-complete';
+
     @property(Node)
     public defaultTarget: Node = null!;
 
@@ -167,6 +170,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         }
 
         EventHandler.emitEvents(this.onComplete);
+        this.node.emit(ItemMoveToTarget.EVENT_COMPLETE, target);
     }
 
     public TeleportToTarget(t: Node) {

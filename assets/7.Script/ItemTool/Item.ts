@@ -5,6 +5,7 @@ import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { ComponentCache } from '../Tool/CacheComponent';
 import { ItemType } from './ItemType';
 import { HeartEffect } from '../Effect/HeartEffect';
+import { BreakHeartEffect } from '../Effect/BreakHeartEffect';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { DOTween, Ease } from '../Tool/DOTween';
 
@@ -134,8 +135,19 @@ export class Item extends Ply_GameUnit {
         }
     }
 
-    public ChangeItemType(itemType: ItemType) {
-        this.itemType = itemType;
+    /** Changes this item's type from an ItemType enum name (for example, "Pan"). */
+    public ChangeItemType(itemTypeName: string): void {
+        const normalizedName = itemTypeName?.trim().toLowerCase();
+        const enumKey = Object.keys(ItemType).find(key =>
+            Number.isNaN(Number(key)) && key.toLowerCase() === normalizedName
+        );
+
+        if (!enumKey) {
+            console.warn(`[Item] Invalid ItemType "${itemTypeName}" on ${this.node.name}.`);
+            return;
+        }
+
+        this.itemType = ItemType[enumKey as keyof typeof ItemType] as ItemType;
     }
 
     public ChangeSprite(spriteFrame: SpriteFrame) {
@@ -226,19 +238,32 @@ export class Item extends Ply_GameUnit {
         this.onKnifeIn.invoke();
     }
 
-    public SpawnHeart(isBreak: boolean) {
+    /** Spawns the success heart effect from the HeartFX pool. */
+    public SpawnHeart() {
         this.TurnOffActiveEffect();
         const spawnPos = this.GetEffectSpawnPosition();
 
         const heartEffect = Ply_Pool.Ins.spawnComponent(HeartEffect, PoolType.HeartFX, spawnPos, undefined, this.node);
         if (heartEffect) {
             this.CacheActiveEffect(heartEffect, PoolType.HeartFX);
-            heartEffect.PlaySpawnWithScale(isBreak ? this.breakHeartEffectScale : this.heartEffectScale);
+            heartEffect.PlaySpawnWithScale(this.heartEffectScale);
+        }
+    }
+
+    /** Spawns the failed-drop break-heart effect from the BreakHeartFX pool. */
+    public SpawnBreakHeart() {
+        this.TurnOffActiveEffect();
+        const spawnPos = this.GetEffectSpawnPosition();
+
+        const breakHeartEffect = Ply_Pool.Ins.spawnComponent(BreakHeartEffect, PoolType.BreakHeartFX, spawnPos, undefined, this.node);
+        if (breakHeartEffect) {
+            this.CacheActiveEffect(breakHeartEffect, PoolType.BreakHeartFX);
+            breakHeartEffect.PlaySpawnWithScale(this.breakHeartEffectScale);
         }
     }
 
     public OnDragFailReturnComplete() {
-        this.SpawnHeart(true);
+        this.SpawnBreakHeart();
     }
 
     public ShouldPlayBobEffectAfterReturn(): boolean {
@@ -256,7 +281,7 @@ export class Item extends Ply_GameUnit {
     }
 
     public SpawnHeartDone() {
-        this.SpawnHeart(false);
+        this.SpawnHeart();
     }
 
     public ItemDone() {

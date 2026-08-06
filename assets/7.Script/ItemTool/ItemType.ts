@@ -16,12 +16,7 @@ export enum ItemType {
     Paper,
     Trash,
     PanCanStir,
-    OvenSlot,
-    Cucumber,
-    Carrot,
-    Avocado,
-    BaseRongBien,
-    RongBienCom,
-    RongBienSot
+    Crust
+
 }
 Enum(ItemType);
