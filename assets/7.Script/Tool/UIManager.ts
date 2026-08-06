@@ -103,7 +103,9 @@ export class UIManager extends Ply_Singleton<UIManager> {
     }
 
     private applyCameraScale(targetOrthographicSize: number) {
-        if (!this.cam) this.cam = Camera.mainCamera;
+        // The Canvas camera is controlled by Cocos' resolution policy. Do not
+        // fall back to Camera.mainCamera here: in this scene it is the Canvas
+        // camera, and changing its orthographic size breaks Widget anchoring.
         if (!this.cam) return;
 
         this.cam.projection = Camera.ProjectionType.ORTHO;
