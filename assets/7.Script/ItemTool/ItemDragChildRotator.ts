@@ -1,7 +1,6 @@
-import { _decorator, Node, Vec3 } from 'cc';
+import { _decorator, Node, Tween, tween, Vec3 } from 'cc';
 import { ItemDraggable } from './ItemDraggable';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
-import { DOTween, Ease } from '../Tool/DOTween';
 
 const { ccclass, property } = _decorator;
 
@@ -64,7 +63,7 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
         }
 
         const target = this.GetRotateTarget();
-        DOTween.Kill(target);
+        Tween.stopAllByTarget(target);
         target.eulerAngles = this.originalEulerAngles;
     }
 
@@ -82,8 +81,8 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
 
     private RotateTo(targetEulerAngles: Vec3) {
         const target = this.GetRotateTarget();
-        DOTween.Kill(target);
-        DOTween.DORotate(target, targetEulerAngles, this.rotateDuration).SetEase(Ease.OutQuad);
+        Tween.stopAllByTarget(target);
+        tween(target).to(this.rotateDuration, { eulerAngles: targetEulerAngles }, { easing: 'quadOut' }).start();
     }
 
     private GetRotateTarget(): Node {

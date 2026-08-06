@@ -1,4 +1,4 @@
-import { _decorator, Node, Sprite, SpriteFrame, Vec2, Vec3, Enum, Animation, EventHandler, animation, SkeletalAnimation } from 'cc';
+import { _decorator, Node, Sprite, SpriteFrame, Tween, tween, Vec3, Enum, Animation, EventHandler, animation, SkeletalAnimation } from 'cc';
 import { Ply_GameUnit } from '../Tool/Ply_GameUnit';
 import { Ply_Pool, PoolType } from '../Tool/Ply_Pool';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
@@ -7,7 +7,6 @@ import { ItemType } from './ItemType';
 import { HeartEffect } from '../Effect/HeartEffect';
 import { BreakHeartEffect } from '../Effect/BreakHeartEffect';
 import { Ply_Event } from '../Tool/Ply_Event';
-import { DOTween, Ease } from '../Tool/DOTween';
 
 import { ItemDraggable } from './ItemDraggable';
 import { ItemClickable } from './ItemClickable';
@@ -217,21 +216,27 @@ export class Item extends Ply_GameUnit {
     public GetInPlate(plateNode: Node) {
         const time = 0.5;
         const plateWorld = plateNode.worldPosition;
-        const targetPos = new Vec2(plateWorld.x, plateWorld.y);
+        const targetPos = new Vec3(plateWorld.x, plateWorld.y, this.node.worldPosition.z);
 
-        DOTween.Kill(this.node);
-        DOTween.DOMove(this.node, targetPos, time).SetEase(Ease.OutSine);
+        Tween.stopAllByTarget(this.node);
+        Tween.stopAllByTarget(plateNode);
+        tween(this.node).to(time, { worldPosition: targetPos }, { easing: 'sineOut' }).start();
 
         const curEuler = this.node.eulerAngles;
-        DOTween.DORotate(this.node, new Vec3(curEuler.x, curEuler.y, curEuler.z - 360), time)
-            .SetEase(Ease.OutSine)
-            .OnComplete(() => {
+        tween(this.node)
+            .to(time, { eulerAngles: new Vec3(curEuler.x, curEuler.y, curEuler.z - 360) }, { easing: 'sineOut' })
+            .call(() => {
                 Ply_SoundManager.Ins.PlayFx(FxType.Drop);
                 this.node.setParent(plateNode);
 
                 // Punch scale effect on plate
-                DOTween.DOPunchScale(plateNode, 0.1, 0.2);
-            });
+                const plateScale = plateNode.scale.clone();
+                tween(plateNode)
+                    .to(0.1, { scale: plateScale.clone().multiplyScalar(1.1) })
+                    .to(0.1, { scale: plateScale })
+                    .start();
+            })
+            .start();
     }
 
     public KnifeIn() {

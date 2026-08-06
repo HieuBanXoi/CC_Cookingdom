@@ -1,8 +1,7 @@
-import { _decorator, Vec3 } from 'cc';
+import { _decorator, Tween, tween, Vec3 } from 'cc';
 import { Ply_GameUnit } from '../Tool/Ply_GameUnit';
 import { Ply_Pool, PoolType } from '../Tool/Ply_Pool';
 import { FxType, Ply_SoundManager } from '../Tool/Ply_SoundManager';
-import { DOTween, Ease } from '../Tool/DOTween';
 
 const { ccclass, property } = _decorator;
 
@@ -38,12 +37,13 @@ export class BreakHeartEffect extends Ply_GameUnit {
             this.defaultScale.z * Math.max(0, scaleMultiplier),
         );
 
-        DOTween.Kill(this.node);
-        DOTween.Sequence()
-            .Append(DOTween.DOScale(this.node, targetScale, 0.25).SetEase(Ease.OutBack))
-            .Append(DOTween.DORotate(this.node, new Vec3(0, 0, 3), 0.12).SetEase(Ease.OutSine))
-            .Append(DOTween.DORotate(this.node, new Vec3(0, 0, -3), 0.18).SetEase(Ease.InOutSine))
-            .Append(DOTween.DORotate(this.node, this.defaultLocalEulerAngles, 0.12).SetEase(Ease.InSine));
+        Tween.stopAllByTarget(this.node);
+        tween(this.node)
+            .to(0.25, { scale: targetScale }, { easing: 'backOut' })
+            .to(0.12, { eulerAngles: new Vec3(0, 0, 3) }, { easing: 'sineOut' })
+            .to(0.18, { eulerAngles: new Vec3(0, 0, -3) }, { easing: 'sineInOut' })
+            .to(0.12, { eulerAngles: this.defaultLocalEulerAngles }, { easing: 'sineIn' })
+            .start();
 
         this.scheduleOnce(this.DeSpawn, lifeTime);
     }
@@ -65,7 +65,7 @@ export class BreakHeartEffect extends Ply_GameUnit {
 
     private resetState(): void {
         this.unschedule(this.DeSpawn);
-        DOTween.Kill(this.node);
+        Tween.stopAllByTarget(this.node);
 
         if (this.isDefaultStateCached) {
             this.node.setScale(this.defaultScale);

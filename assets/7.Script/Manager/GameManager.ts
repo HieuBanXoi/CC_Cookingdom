@@ -5,7 +5,6 @@ import { IGameState } from './StateMachine/IGameState';
 import { OnPlayState } from './StateMachine/OnPlayState';
 import { WinState } from './StateMachine/WinState';
 import { LoseState } from './StateMachine/LoseState';
-import '../Tool/DOTween';
 import { GameController } from '../Tool/GameController';
 
 const { ccclass, property } = _decorator;

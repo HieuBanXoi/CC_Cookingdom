@@ -1,8 +1,7 @@
-import { _decorator, Node, Vec2, Vec3, Enum, EventHandler } from 'cc';
+import { _decorator, Node, Tween, tween, Vec2, Vec3, Enum, EventHandler } from 'cc';
 import { GameManager } from '../Manager/GameManager';
 import { Item } from './Item';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
-import { DOTween, Ease } from '../Tool/DOTween';
 
 const { ccclass, property } = _decorator;
 
@@ -94,7 +93,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
             targetPos.set(knifeWorld.x, knifeWorld.y);
         }
 
-        DOTween.Kill(this.node);
+        Tween.stopAllByTarget(this.node);
 
         if (this.resetParentBeforeMove && this.originalParent && this.originalParent.isValid) {
             this.node.setParent(this.originalParent);
@@ -106,26 +105,42 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
 
         if (this.scaleOnMove) {
             const targetScale = this.node.scale.clone().multiplyScalar(this.endScaleMultiplier);
-            DOTween.DOScale(this.node, targetScale, this.duration).SetEase(Ease.OutQuad);
+            tween(this.node).to(this.duration, { scale: targetScale }, { easing: 'quadOut' }).start();
         }
 
         switch (this.moveType) {
             case MoveType.Smooth:
-                DOTween.DOMove(this.node, targetPos, this.duration)
-                    .SetEase(Ease.OutQuad)
-                    .OnComplete(() => this.FinishAction(target));
+                tween(this.node)
+                    .to(this.duration, { worldPosition: new Vec3(targetPos.x, targetPos.y, this.node.worldPosition.z) }, { easing: 'quadOut' })
+                    .call(() => this.FinishAction(target))
+                    .start();
                 break;
 
             case MoveType.Jump:
-                DOTween.DOJump(this.node, targetPos, this.jumpPower, this.numJumps, this.duration)
-                    .SetEase(Ease.OutSine)
-                    .OnComplete(() => this.FinishAction(target));
+                const jumpStart = this.node.worldPosition.clone();
+                const jumpState = { progress: 0 };
+                tween(jumpState)
+                    .to(this.duration, { progress: 1 }, {
+                        easing: 'sineOut',
+                        onUpdate: state => {
+                            const progress = (state as { progress: number }).progress;
+                            const arc = Math.sin(progress * Math.PI * this.numJumps) * this.jumpPower;
+                            this.node.setWorldPosition(
+                                jumpStart.x + (targetPos.x - jumpStart.x) * progress,
+                                jumpStart.y + (targetPos.y - jumpStart.y) * progress + arc,
+                                jumpStart.z,
+                            );
+                        },
+                    })
+                    .call(() => this.FinishAction(target))
+                    .start();
 
                 if (this.rotate360DuringJump) {
                     const rotAngle = this.flipRotate ? -this.angleRotate : this.angleRotate;
                     const curEuler = this.node.eulerAngles;
-                    DOTween.DORotate(this.node, new Vec3(curEuler.x, curEuler.y, curEuler.z + rotAngle), this.duration)
-                        .SetEase(Ease.OutSine);
+                    tween(this.node)
+                        .to(this.duration, { eulerAngles: new Vec3(curEuler.x, curEuler.y, curEuler.z + rotAngle) }, { easing: 'sineOut' })
+                        .start();
                 }
                 break;
 
@@ -137,12 +152,13 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
             case MoveType.ShakeThenMove:
                 const currentWorld = this.node.worldPosition;
                 const origPos = new Vec2(currentWorld.x, currentWorld.y);
-                DOTween.Sequence()
-                    .Append(DOTween.DOMove(this.node, new Vec2(origPos.x + 10, origPos.y), 0.1))
-                    .Append(DOTween.DOMove(this.node, new Vec2(origPos.x - 10, origPos.y), 0.1))
-                    .Append(DOTween.DOMove(this.node, origPos, 0.1))
-                    .Append(DOTween.DOMove(this.node, targetPos, this.duration).SetEase(Ease.OutQuad))
-                    .OnComplete(() => this.FinishAction(target));
+                tween(this.node)
+                    .to(0.1, { worldPosition: new Vec3(origPos.x + 10, origPos.y, this.node.worldPosition.z) })
+                    .to(0.1, { worldPosition: new Vec3(origPos.x - 10, origPos.y, this.node.worldPosition.z) })
+                    .to(0.1, { worldPosition: new Vec3(origPos.x, origPos.y, this.node.worldPosition.z) })
+                    .to(this.duration, { worldPosition: new Vec3(targetPos.x, targetPos.y, this.node.worldPosition.z) }, { easing: 'quadOut' })
+                    .call(() => this.FinishAction(target))
+                    .start();
                 break;
         }
     }

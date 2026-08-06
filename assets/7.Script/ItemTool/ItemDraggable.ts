@@ -1,10 +1,9 @@
-import { _decorator, Node, Vec2, Vec3, Enum, EventTouch, UITransform } from 'cc';
+import { _decorator, Node, Tween, tween, Vec3, Enum, EventTouch, UITransform } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { InputManager } from './InputManager';
 import { ItemType } from './ItemType';
 import { Item } from './Item';
-import { DOTween, Ease } from '../Tool/DOTween';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
 import { ComponentCache } from '../Tool/CacheComponent';
 import { GameManager } from '../Manager/GameManager';
@@ -140,7 +139,6 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     private onTouchStart(event: EventTouch) {
-        console.log("onTouchStart");
         this.BeginDrag();
     }
 
@@ -152,7 +150,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.node.setWorldPosition(
             currentPosition.x + uiDelta.x,
             currentPosition.y + uiDelta.y,
-            currentPosition.z
+            currentPosition.z,
         );
     }
 
@@ -161,10 +159,9 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     public BeginDrag(): boolean {
-        console.log("BeginDrag");
         if (!GameManager.Ins?.IsPlaying() || !this.CanDrag()) return false;
 
-        DOTween.Kill(this.node);
+        Tween.stopAllByTarget(this.node);
         this.isReturningToStart = false;
         this.isForceReturningToStart = false;
         this.SetShadowActive(false);
@@ -188,7 +185,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         }
 
         const scaled = this.originalScale.clone().multiplyScalar(this.dragScaleMultiplier);
-        DOTween.DOScale(this.node, scaled, this.dragScaleDuration).SetEase(Ease.OutBack);
+        tween(this.node).to(this.dragScaleDuration, { scale: scaled }, { easing: 'backOut' }).start();
 
         this.isDraggingSession = true;
         this.onBeginDrag.invoke();
@@ -228,25 +225,27 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     public ReturnToStart(spawnHeart: boolean = true) {
         this.spawnHeartOnReturnComplete = spawnHeart;
         this.isReturningToStart = true;
-        DOTween.Kill(this.node);
+        Tween.stopAllByTarget(this.node);
 
         // A canvas resize/orientation change updates the original parent's
         // transform. Returning to the world position cached in onLoad would
         // therefore use the old canvas coordinate system on Web.
         if (!this.hasCachedReturnPosition && !this.returnTransform && this.originalParent?.isValid) {
             this.RestoreOriginalParent();
-            DOTween.DOLocalMove(this.node, this.originalLocalPos, 0.3)
-                .SetEase(Ease.OutQuart)
-                .OnComplete(() => this.OnReturnToStartComplete());
+            tween(this.node)
+                .to(0.3, { position: this.originalLocalPos }, { easing: 'quartOut' })
+                .call(() => this.OnReturnToStartComplete())
+                .start();
             return;
         }
 
         const targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
             (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
 
-        DOTween.DOMove(this.node, new Vec2(targetPos.x, targetPos.y), 0.3)
-            .SetEase(Ease.OutQuart)
-            .OnComplete(() => this.OnReturnToStartComplete());
+        tween(this.node)
+            .to(0.3, { worldPosition: new Vec3(targetPos.x, targetPos.y, this.node.worldPosition.z) }, { easing: 'quartOut' })
+            .call(() => this.OnReturnToStartComplete())
+            .start();
     }
 
     /** Returns the item to its start position without spawning a failed-drag heart. */
@@ -293,7 +292,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     public TeleportToStart() {
         this.isReturningToStart = false;
         this.isForceReturningToStart = false;
-        DOTween.Kill(this.node);
+        Tween.stopAllByTarget(this.node);
         this.ResetScale();
 
         if (!this.hasCachedReturnPosition && !this.returnTransform && this.originalParent?.isValid) {
@@ -347,7 +346,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     private ResetScale() {
-        DOTween.Kill(this.node);
+        Tween.stopAllByTarget(this.node);
         this.node.setScale(this.originalScale);
     }
 
