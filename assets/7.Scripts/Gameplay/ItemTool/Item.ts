@@ -7,6 +7,7 @@ import { ComponentCache } from '../Tool/CacheComponent';
 import { ItemType } from './ItemType';
 import { HeartEffect } from '../Effect/HeartEffect';
 import { BreakHeartEffect } from '../Effect/BreakHeartEffect';
+import { BlinkEffect } from '../Effect/BlinkEffect';
 import { Ply_Event } from '../Tool/Ply_Event';
 
 import { ItemDraggable } from './ItemDraggable';
@@ -250,6 +251,7 @@ export class Item extends Ply_GameUnit {
 
         const heartEffect = World.instance?.poolManager?.spawnType<HeartEffect>(PoolType.HeartFX, spawnPos);
         if (heartEffect) {
+            this.AttachEffectToItem(heartEffect);
             this.CacheActiveEffect(heartEffect);
             heartEffect.PlaySpawnWithScale(this.heartEffectScale);
         }
@@ -262,8 +264,22 @@ export class Item extends Ply_GameUnit {
 
         const breakHeartEffect = World.instance?.poolManager?.spawnType<BreakHeartEffect>(PoolType.BreakHeartFX, spawnPos);
         if (breakHeartEffect) {
+            this.AttachEffectToItem(breakHeartEffect);
             this.CacheActiveEffect(breakHeartEffect);
             breakHeartEffect.PlaySpawnWithScale(this.breakHeartEffectScale);
+        }
+    }
+
+    /** Spawns the blink effect from the BlinkFX pool at this item's position. */
+    public SpawnBlinkEffect() {
+        this.TurnOffActiveEffect();
+        const spawnPos = this.GetEffectSpawnPosition();
+        const blinkEffect = World.instance?.poolManager?.spawnType<BlinkEffect>(PoolType.BlinkFX, spawnPos);
+        if (blinkEffect) {
+            Ply_SoundManager.Ins.PlayFx(FxType.Blink);
+            this.AttachEffectToItem(blinkEffect);
+            this.CacheActiveEffect(blinkEffect);
+            blinkEffect.DeSpawnByTime();
         }
     }
 
@@ -303,6 +319,13 @@ export class Item extends Ply_GameUnit {
     private CacheActiveEffect(effect: PoolMember) {
         this.TurnOffActiveEffect();
         this.activeEffect = effect;
+    }
+
+    private AttachEffectToItem(effect: PoolMember): void {
+        if (effect.node.parent !== this.node) {
+            effect.node.setParent(this.node);
+        }
+        effect.node.setPosition(0, 0, this.fxSpawnZPos);
     }
 
     protected GetEffectSpawnPosition(): Vec3 {

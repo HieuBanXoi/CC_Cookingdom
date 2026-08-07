@@ -3,7 +3,6 @@ import { Item } from '../ItemTool/Item';
 import { ItemType } from '../ItemTool/ItemType';
 import { ItemStirring, StirMovementMode } from '../ItemTool/ItemStirring';
 import { Ply_Singleton } from '../Tool/Ply_Singleton';
-import { GameManager } from './GameManager';
 
 const { ccclass, property } = _decorator;
 
@@ -90,11 +89,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
         if (this.isPointerDown || this.isGameplayDragging) {
             this.resetIdleTimer();
-            this.hideHandTut();
-            return;
-        }
-
-        if (!GameManager.Ins?.IsPlaying() || GameManager.Ins.isLoseGame) {
             this.hideHandTut();
             return;
         }

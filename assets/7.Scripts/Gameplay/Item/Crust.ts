@@ -3,6 +3,8 @@ import { Item } from '../ItemTool/Item';
 import { ItemType } from '../ItemTool/ItemType';
 import { ItemMoveToTarget } from '../ItemTool/ItemMoveToTarget';
 import { GameManager } from '../Manager/GameManager';
+import { ComponentCache } from '../Tool/CacheComponent';
+import { AnimationControllerHelper } from '../Tool/AnimationControllerHelper';
 
 const { ccclass, property } = _decorator;
 
@@ -32,6 +34,8 @@ export class Crust extends Item {
 
     private OnMoveToTargetComplete(): void {
         if (this.itemDraggable?.targetItemType === ItemType.Pan) {
+            ComponentCache.get(this.node, AnimationControllerHelper)?.PlayTrigger('Next');
+            this.CanRoll();
             GameManager.Ins?.StopGame();
         }
     }

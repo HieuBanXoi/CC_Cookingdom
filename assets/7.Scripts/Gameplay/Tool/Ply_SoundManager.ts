@@ -20,7 +20,6 @@ export enum FxType {
     Peer,
     FoodPlace,
     Cream,
-    LeafOn,
     PlaceVege,
     PouringSalt,
     PouringWater,
@@ -32,10 +31,10 @@ export enum FxType {
     Stirring,
     PaintSauce,
     Rolling,
-    DuckSound,
-    Swipe,
+    TurnOnStove,
     Win,
-    Lose
+    Lose,
+    Cat
 }
 Enum(FxType);
 

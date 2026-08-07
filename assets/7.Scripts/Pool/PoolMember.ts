@@ -18,8 +18,8 @@ export enum PoolType {
     VFX,
     StarVFX,
     HeartFX,
-    BreakHeartFX
-    
+    BreakHeartFX,
+    BlinkFX
 }
 
 @ccclass

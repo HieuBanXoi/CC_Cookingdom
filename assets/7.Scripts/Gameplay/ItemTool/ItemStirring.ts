@@ -3,7 +3,6 @@ import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
 import { GameManager } from '../Manager/GameManager';
-import { InputManager } from '../../Manager/InputManager';
 
 const { ccclass, property } = _decorator;
 
@@ -66,32 +65,6 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
     public get IsStirring(): boolean {
         return this.isStirring;
-    }
-
-    protected onLoad() {
-        this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        this.node.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.node.on(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
-    }
-
-    protected onDestroy() {
-        this.node.off(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        this.node.off(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.node.off(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
-    }
-
-    private onTouchStart(event: EventTouch) {
-        InputManager.Ins?.BeginStirItem(this, event);
-    }
-
-    private onTouchMove(event: EventTouch) {
-        this.Stir(event);
-    }
-
-    private onTouchEnd(event: EventTouch) {
-        InputManager.Ins?.EndInteraction();
     }
 
     public BeginStir(event?: EventTouch) {

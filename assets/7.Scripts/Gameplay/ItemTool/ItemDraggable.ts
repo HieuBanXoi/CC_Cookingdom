@@ -3,9 +3,8 @@ import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { InputManager } from '../../Manager/InputManager';
 import { ItemType } from './ItemType';
-import { Item } from './Item';
+import type { Item } from './Item';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
-import { ComponentCache } from '../Tool/CacheComponent';
 import { GameManager } from '../Manager/GameManager';
 
 const { ccclass, property } = _decorator;
@@ -107,7 +106,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     protected onLoad() {
-        this.item = this.getComponent(Item);
+        this.item = this.getComponent('Item') as Item | null;
         this.originalParent = this.node.parent;
         this.originalSiblingIndex = this.node.getSiblingIndex();
         Vec3.copy(this.originalLocalPos, this.node.position);
@@ -126,24 +125,9 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.hasCachedReturnPosition = true;
         }
 
-        this.node.on(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        this.node.on(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.node.on(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
-    protected onDestroy() {
-        this.node.off(Node.EventType.TOUCH_START, this.onTouchStart, this);
-        this.node.off(Node.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.node.off(Node.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
-    }
-
-    private onTouchStart(event: EventTouch) {
-        InputManager.Ins?.BeginDragItem(this);
-    }
-
-    private onTouchMove(event: EventTouch) {
+    public HandleTouchMove(event: EventTouch) {
         if (!this.isDraggingSession) return;
 
         // Item positions are in Canvas/UI coordinates, not physical screen
@@ -173,9 +157,8 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.pendingDragDelta.set(0, 0);
     }
 
-    private onTouchEnd(event: EventTouch) {
+    public CompleteTouchDrag() {
         this.ApplyPendingDragMove();
-        InputManager.Ins?.EndInteraction();
     }
 
     public BeginDrag(): boolean {
@@ -282,7 +265,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         const scene = this.node.scene;
         if (!scene) return null;
 
-        const items = scene.getComponentsInChildren(Item);
+        const items = scene.getComponentsInChildren('Item') as Item[];
         const myWorldPos = this.node.worldPosition;
 
         for (let i = 0; i < items.length; i++) {
@@ -364,7 +347,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
     /** Sets the accepted drop type from the Item component on the supplied node. */
     public SetTargetItemType(target: Node | null) {
-        const targetItem = target ? ComponentCache.get(target, Item) : null;
+        const targetItem = target?.getComponent('Item') as Item | null;
         if (!targetItem) {
             console.warn(`[ItemDraggable] Item component not found on target for ${this.node.name}.`);
             return;

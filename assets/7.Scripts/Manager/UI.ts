@@ -60,7 +60,6 @@ export class UI extends Component {
     bindingToStore() {
         PointerController?.ins.unBindingEvent();
         ipm.offBinding();
-        PointerController?.ins.onStore();
     }
 
     openStore(...args: any) {

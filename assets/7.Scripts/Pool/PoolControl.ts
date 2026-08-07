@@ -10,11 +10,10 @@ import { CCInteger, Component, Node, Prefab, _decorator } from "cc";
 import { PoolMember, PoolType } from "./PoolMember";
 import { PoolAmount, PoolManager } from "./PoolManager";
 
-const { ccclass, property, executeInEditMode } = _decorator;
+const { ccclass, property } = _decorator;
 
 
 @ccclass('PoolControl')
-@executeInEditMode(true)
 export default class PoolControl extends Component {
 
   @property(Node)

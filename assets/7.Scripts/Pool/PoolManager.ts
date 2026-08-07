@@ -10,7 +10,7 @@ import { CCInteger, Component, Node, Prefab, Quat, Vec3, _decorator, instantiate
 import { PoolMember, PoolType } from "./PoolMember";
 import PoolControl from "./PoolControl";
 
-const { ccclass, property, executeInEditMode } = _decorator;
+const { ccclass, property } = _decorator;
 
 
 export class Pool {
@@ -65,7 +65,6 @@ export class PoolAmount {
 export var pm: PoolManager = null;
 
 @ccclass
-@executeInEditMode(true)
 export class PoolManager extends Component{
 
   

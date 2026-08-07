@@ -32,6 +32,11 @@
         "frame": 0.23333333333333334,
         "func": "CanRoll",
         "params": []
+      },
+      {
+        "frame": 0.23333333333333334,
+        "func": "PlayPlaceFoodSound",
+        "params": []
       }
     ],
     "_embeddedPlayers": []

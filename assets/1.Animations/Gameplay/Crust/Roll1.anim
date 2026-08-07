@@ -388,7 +388,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.781,
+        "value": 0.781000018119812,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,

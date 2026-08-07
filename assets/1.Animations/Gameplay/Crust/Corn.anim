@@ -22,7 +22,18 @@
       }
     ],
     "_exoticAnimation": null,
-    "_events": [],
+    "_events": [
+      {
+        "frame": 0.23333333333333334,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.23333333333333334,
+        "func": "PlayPlaceFoodSound",
+        "params": []
+      }
+    ],
     "_embeddedPlayers": []
   },
   {
@@ -73,7 +84,7 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.23333333333333334
+      0.23333333432674408
     ],
     "_values": [
       {
@@ -118,14 +129,14 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.23333333333333334
+      0.23333333432674408
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 115.568,
+        "value": 115.56800079345703,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -139,7 +150,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -33.523,
+        "value": -33.52299880981445,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -289,7 +300,7 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.23333333333333334
+      0.23333333432674408
     ],
     "_values": [
       {

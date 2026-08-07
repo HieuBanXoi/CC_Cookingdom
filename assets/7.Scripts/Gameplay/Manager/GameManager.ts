@@ -36,7 +36,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
 
     protected onLoad() {
         super.onLoad();
-        input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         this.disableBrowserTouchGestures();
     }
 
@@ -51,7 +51,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
     }
 
     protected onDestroy() {
-        input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
 
         if (this.preventNativeTouch && typeof document !== 'undefined') {
             const canvas = document.getElementById('GameCanvas');
@@ -59,7 +59,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
         }
     }
 
-    private onTouchEnd(event: EventTouch) {
+    private onTouchStart(event: EventTouch) {
         if (this.isGotoStore) {
             this.GotoStore();
         }
@@ -102,7 +102,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
      * Redirect to store (Left empty for user to implement)
      */
     public GotoStore() {
-        
+
         GameController.redirectToStore();
     }
 
@@ -121,7 +121,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
         }
     }
 
-    /** Stops gameplay; the player's next touch anywhere redirects to the store. */
+    /** Stops gameplay; the next screen touch redirects to the store. */
     public StopGame() {
         this.ChangeState(new StopGameState());
     }

@@ -55,9 +55,6 @@ export class ItemSound extends Ply_EventHandlerComponent {
         this.PlaySoundFX(FxType.Cream);
     }
 
-    public PlayLeafSound() {
-        this.PlaySoundFX(FxType.LeafOn);
-    }
 
     public PlayLeafToDishSound() {
         this.PlaySoundFX(FxType.PlaceVege);
@@ -97,5 +94,11 @@ export class ItemSound extends Ply_EventHandlerComponent {
 
     public StopFryingSound() {
         Ply_SoundManager.Ins.StopFxLoop(FxType.Frying);
+    }
+    public PlayTurningOnStoveSound() {
+        this.PlaySoundFX(FxType.TurnOnStove);
+    }
+    public PlayCatSound() {
+        this.PlaySoundFX(FxType.Cat);
     }
 }

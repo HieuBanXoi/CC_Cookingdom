@@ -1,9 +1,7 @@
-import { _decorator, Node, EventTouch } from 'cc';
+import { _decorator } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
-import { GameManager } from '../Manager/GameManager';
-import { InputManager } from '../../Manager/InputManager';
 
 const { ccclass, property } = _decorator;
 
@@ -29,21 +27,6 @@ export class ItemClickable extends Ply_EventHandlerComponent {
     public onClickComplete: Ply_Event = new Ply_Event();
 
     private currentClicks: number = 0;
-
-    protected onLoad() {
-        this.node.on(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-    }
-
-    protected onDestroy() {
-        this.node.off(Node.EventType.TOUCH_END, this.onTouchEnd, this);
-    }
-
-    private onTouchEnd(event: EventTouch) {
-        if (!GameManager.Ins?.IsPlaying()) return;
-        if (!this.canClick) return;
-        InputManager.Ins?.RegisterFirstMove();
-        this.PerformClick();
-    }
 
     public PerformClick() {
         if (!this.canClick) return;

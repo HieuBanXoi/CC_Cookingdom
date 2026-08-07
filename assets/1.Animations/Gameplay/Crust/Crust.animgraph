@@ -11,7 +11,7 @@
     ],
     "_variables": {
       "Next": {
-        "__id__": 53
+        "__id__": 57
       }
     }
   },
@@ -32,8 +32,8 @@
       "clone": null,
       "viewport": {
         "scale": 1,
-        "top": 0,
-        "left": 0
+        "top": 77,
+        "left": 3
       }
     },
     "_states": [
@@ -81,14 +81,14 @@
       },
       {
         "__id__": 28
+      },
+      {
+        "__id__": 30
       }
     ],
     "_transitions": [
       {
-        "__id__": 30
-      },
-      {
-        "__id__": 31
+        "__id__": 32
       },
       {
         "__id__": 33
@@ -119,6 +119,12 @@
       },
       {
         "__id__": 51
+      },
+      {
+        "__id__": 53
+      },
+      {
+        "__id__": 55
       }
     ],
     "_entryState": {
@@ -514,6 +520,35 @@
     }
   },
   {
+    "__type__": "cc.animation.Motion",
+    "__editorExtras__": {
+      "name": "",
+      "id": "17860861616300.20242053837872698",
+      "clone": null,
+      "centerX": -146,
+      "centerY": -164
+    },
+    "name": "1-012",
+    "_components": [],
+    "motion": {
+      "__id__": 31
+    },
+    "speed": 1,
+    "speedMultiplier": "",
+    "speedMultiplierEnabled": false
+  },
+  {
+    "__type__": "cc.animation.ClipMotion",
+    "__editorExtras__": {
+      "id": "17860861616300.5924559172940085",
+      "clone": null
+    },
+    "clip": {
+      "__uuid__": "c8000bf1-0079-4193-b8ae-aef420ee6fc3",
+      "__expectedType__": "cc.AnimationClip"
+    }
+  },
+  {
     "__type__": "cc.animation.Transition",
     "__editorExtras__": {
       "name": "",
@@ -543,7 +578,7 @@
     },
     "conditions": [
       {
-        "__id__": 32
+        "__id__": 34
       }
     ],
     "duration": 0.3,
@@ -573,7 +608,7 @@
     },
     "conditions": [
       {
-        "__id__": 34
+        "__id__": 36
       }
     ],
     "duration": 0.3,
@@ -603,7 +638,7 @@
     },
     "conditions": [
       {
-        "__id__": 36
+        "__id__": 38
       }
     ],
     "duration": 0.3,
@@ -633,7 +668,7 @@
     },
     "conditions": [
       {
-        "__id__": 38
+        "__id__": 40
       }
     ],
     "duration": 0.3,
@@ -663,7 +698,7 @@
     },
     "conditions": [
       {
-        "__id__": 40
+        "__id__": 42
       }
     ],
     "duration": 0.3,
@@ -693,7 +728,7 @@
     },
     "conditions": [
       {
-        "__id__": 42
+        "__id__": 44
       }
     ],
     "duration": 0.3,
@@ -723,7 +758,7 @@
     },
     "conditions": [
       {
-        "__id__": 44
+        "__id__": 46
       }
     ],
     "duration": 0.3,
@@ -753,7 +788,7 @@
     },
     "conditions": [
       {
-        "__id__": 46
+        "__id__": 48
       }
     ],
     "duration": 0.3,
@@ -783,7 +818,7 @@
     },
     "conditions": [
       {
-        "__id__": 48
+        "__id__": 50
       }
     ],
     "duration": 0.3,
@@ -813,7 +848,37 @@
     },
     "conditions": [
       {
-        "__id__": 50
+        "__id__": 52
+      }
+    ],
+    "duration": 0.3,
+    "relativeDuration": false,
+    "exitConditionEnabled": false,
+    "destinationStart": 0,
+    "relativeDestinationStart": false,
+    "interruptionSource": 0,
+    "_exitCondition": 1
+  },
+  {
+    "__type__": "cc.animation.TriggerCondition",
+    "trigger": "Next"
+  },
+  {
+    "__type__": "cc.animation.AnimationTransition",
+    "__editorExtras__": {
+      "name": "",
+      "id": "17860861579690.8396938933940286",
+      "clone": null
+    },
+    "from": {
+      "__id__": 26
+    },
+    "to": {
+      "__id__": 28
+    },
+    "conditions": [
+      {
+        "__id__": 54
       }
     ],
     "duration": 0.3,
@@ -832,14 +897,14 @@
     "__type__": "cc.animation.AnimationTransition",
     "__editorExtras__": null,
     "from": {
-      "__id__": 26
+      "__id__": 28
     },
     "to": {
-      "__id__": 28
+      "__id__": 30
     },
     "conditions": [
       {
-        "__id__": 52
+        "__id__": 56
       }
     ],
     "duration": 0.3,
