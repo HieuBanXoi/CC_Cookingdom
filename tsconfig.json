@@ -1,12 +1,15 @@
 {
+  /* Base configuration. Do not edit this field. */
   "extends": "./temp/tsconfig.cocos.json",
+
+  /* Add your custom configuration here. */
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "strict": false,
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false
-  },
-  "include": [
-    "assets/**/*",
-    "temp/declarations/**/*"
-  ]
+    "lib": [
+      "es2017",
+      "DOM"
+    ],
+    
+  }
 }
