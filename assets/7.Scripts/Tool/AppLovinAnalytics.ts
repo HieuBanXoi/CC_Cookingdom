@@ -14,7 +14,7 @@
 //     CTA_CLICKED
 // }
 
-import { Director, director, DirectorEvent } from "cc";
+import { Director, director } from "cc";
 
 export class AppLovinAnalytics {
 

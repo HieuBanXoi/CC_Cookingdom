@@ -32,7 +32,7 @@ export class Crust extends Item {
 
     private OnMoveToTargetComplete(): void {
         if (this.itemDraggable?.targetItemType === ItemType.Pan) {
-            GameManager.Ins?.LoseGame();
+            GameManager.Ins?.StopGame();
         }
     }
 

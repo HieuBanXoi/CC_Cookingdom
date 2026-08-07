@@ -29,9 +29,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     @property(Node)
     public handNode: Node = null!;
 
-    @property(Node)
-    public tapToCookNode: Node = null!;
-
     @property({ tooltip: 'Wait for StartHandTut() instead of beginning automatically.' })
     public waitForStartSignal = false;
 
@@ -68,10 +65,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     private activeAuxTween: Tween<object> | null = null;
     private boundItems = new Set<Item>();
 
-    public get ShouldBlockGameplayInput(): boolean {
-        return this.tapToCookNode?.activeInHierarchy ?? false;
-    }
-
     protected onLoad(): void {
         super.onLoad();
         if (this.handNode) {
@@ -89,7 +82,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     protected start(): void {
         this.bindConfiguredItems();
         this.isStarted = !this.waitForStartSignal;
-        if (this.tapToCookNode) this.tapToCookNode.active = this.waitForStartSignal;
     }
 
     protected update(deltaTime: number): void {
@@ -123,7 +115,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     public StartHandTut(): void {
         this.isStarted = true;
-        if (this.tapToCookNode) this.tapToCookNode.active = false;
         this.resetIdleTimer();
     }
 
@@ -158,7 +149,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private onTouchStart(): void {
         this.isPointerDown = true;
-        if (this.tapToCookNode?.activeInHierarchy) this.StartHandTut();
+        if (!this.isStarted) this.StartHandTut();
         this.hideHandTut();
         this.resetIdleTimer();
     }

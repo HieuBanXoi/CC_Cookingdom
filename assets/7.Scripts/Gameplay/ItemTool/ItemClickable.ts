@@ -3,6 +3,7 @@ import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
 import { GameManager } from '../Manager/GameManager';
+import { InputManager } from '../../Manager/InputManager';
 
 const { ccclass, property } = _decorator;
 
@@ -39,6 +40,8 @@ export class ItemClickable extends Ply_EventHandlerComponent {
 
     private onTouchEnd(event: EventTouch) {
         if (!GameManager.Ins?.IsPlaying()) return;
+        if (!this.canClick) return;
+        InputManager.Ins?.RegisterFirstMove();
         this.PerformClick();
     }
 

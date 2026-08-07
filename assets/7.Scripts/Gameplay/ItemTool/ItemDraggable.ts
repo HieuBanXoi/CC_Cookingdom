@@ -140,7 +140,6 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     private onTouchStart(event: EventTouch) {
-        console.log(`[ItemDraggable] onTouchStart: ${this.node.name}`);
         InputManager.Ins?.BeginDragItem(this);
     }
 
@@ -180,7 +179,6 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     public BeginDrag(): boolean {
-        console.log(`[ItemDraggable] BeginDrag: ${this.node.name}`);
         if (!GameManager.Ins?.IsPlaying() || !this.CanDrag()) return false;
 
         Tween.stopAllByTarget(this.node);
@@ -322,6 +320,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         if (!this.hasCachedReturnPosition && !this.returnTransform && this.originalParent?.isValid) {
             this.RestoreOriginalParent();
             this.node.setPosition(this.originalLocalPos);
+            this.RestoreOriginalSiblingIndex();
             return;
         }
 
@@ -330,6 +329,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
         this.node.setWorldPosition(targetPos.x, targetPos.y, this.node.worldPosition.z);
         this.RestoreOriginalParent();
+        this.RestoreOriginalSiblingIndex();
     }
 
     public RestoreOriginalParent() {
@@ -339,9 +339,13 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.node.setParent(this.originalParent);
             this.node.setWorldPosition(worldPos);
             this.node.setWorldScale(worldScale);
-            if (this.originalSiblingIndex >= 0 && this.originalSiblingIndex < this.originalParent.children.length) {
-                this.node.setSiblingIndex(this.originalSiblingIndex);
-            }
+        }
+    }
+
+    private RestoreOriginalSiblingIndex() {
+        if (this.originalParent?.isValid && this.node.parent === this.originalParent
+            && this.originalSiblingIndex >= 0 && this.originalSiblingIndex < this.originalParent.children.length) {
+            this.node.setSiblingIndex(this.originalSiblingIndex);
         }
     }
 
@@ -394,6 +398,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.isForceReturningToStart = false;
         this.isReturningToStart = false;
         this.RestoreOriginalParent();
+        this.RestoreOriginalSiblingIndex();
         this.SetShadowActive(true);
         this.PlayReturnToStartFinishSound();
         this.onReturnToStartComplete.invoke();

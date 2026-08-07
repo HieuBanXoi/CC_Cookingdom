@@ -2,6 +2,9 @@ import { _decorator, Camera, Component, EventKeyboard, EventTouch, geometry, Inp
 import { World } from './World';
 const { ccclass, property } = _decorator;
 
+/** Active PointerController instance used by legacy input helpers such as Zoom. */
+export let pc: PointerController | null = null;
+
 @ccclass('PointerController')
 export class PointerController extends Component {
 
@@ -23,21 +26,27 @@ export class PointerController extends Component {
     @property
     creativeMode: boolean = false;
     currentNode: Node = null!;
+    public bindingStart: (event: EventTouch) => void = () => {};
+    public bindingMove: (event: EventTouch) => void = () => {};
+    public bindingEnd: (event: EventTouch) => void = () => {};
 
     onLoad() {
         PointerController.instance = this;
+        pc = this;
     }
 
     bindingEvent() {
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        input.on(Input.EventType.TOUCH_END || Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        input.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
     unBindingEvent() {
         input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        input.off(Input.EventType.TOUCH_END || Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        input.off(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        input.off(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
     }
 
     onStore() {
@@ -53,15 +62,18 @@ export class PointerController extends Component {
         let slot = this.rayCastDetect(event.getLocation())?.slot;
         if(slot) {
         }
+        this.bindingStart(event);
         
     }
 
     onTouchMove(event: EventTouch) { 
         if(this.moving) return;
+        this.bindingMove(event);
     }
 
     onTouchEnd(event: EventTouch) {
         if(this.moving) return;
+        this.bindingEnd(event);
     }
 
     rayCastDetect(pos: Vec2, layer: number = 1) {
@@ -118,6 +130,12 @@ export class PointerController extends Component {
             input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         }
         // this.bindingEvent();
+    }
+
+    onDestroy() {
+        this.unBindingEvent();
+        if (PointerController.instance === this) PointerController.instance = null!;
+        if (pc === this) pc = null;
     }
 
     

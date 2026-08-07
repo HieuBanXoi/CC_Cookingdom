@@ -75,7 +75,7 @@ f = () => {
           sdkScript: '<script src="./mraid.js"></script>',
         },
         Unity: {
-          head: "\n<!--https://play.google.com/store/apps/details?id=com.abi.packingdom\n-->\n<!--https://apps.apple.com/us/app/packingdom/id6760441822\n-->",
+          head: "\n<!--https://play.google.com/store/apps/details?id=com.abi.cook.chill\n-->\n<!--https://apps.apple.com/us/app/cookingdom/id6742222069\n-->",
           body: "<script>if(mraid.getState()==='loading'){mraid.addEventListener('ready',onSdkReady)}else{onSdkReady()}function viewableChangeHandler(viewable){if(viewable){}else{}}function onSdkReady(){mraid.addEventListener('viewableChange',viewableChangeHandler);if(mraid.isViewable()){showMyAd()}}var url='';var android='';function setStoreUrl(iosUrl, androidUrl){url=iosUrl;android=androidUrl;if(/android/i.test(navigator.userAgent)){url=android}};function redirectStore(){mraid.open(url)};function showMyAd(){}</script>",
           sdkScript: '<script src="./mraid.js"></script>',
         },

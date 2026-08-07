@@ -4,6 +4,7 @@ import { PointerController } from './PointerController';
 import { FxType, Ply_SoundManager } from '../Gameplay/Tool/Ply_SoundManager';
 import { Clock } from './Clock';
 import { ipm } from './InputManager';
+import { GameController } from '../Tool/GameController';
 const { ccclass, property } = _decorator;
 
 export enum BindUIType {
@@ -57,15 +58,14 @@ export class UI extends Component {
     }
 
     bindingToStore() {
-        PointerController.ins.unBindingEvent();
+        PointerController?.ins.unBindingEvent();
         ipm.offBinding();
-        PointerController.ins.onStore();
+        PointerController?.ins.onStore();
     }
 
     openStore(...args: any) {
-        console.log('openStore');  
         Ply_SoundManager.Ins?.Mute();
-        World.ins.openStore.redirectToStore();
+        GameController.redirectToStore();
     }
 
     first: boolean = true;

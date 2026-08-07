@@ -35,6 +35,7 @@ export class InputManager extends Ply_Singleton<InputManager> {
         this.currentDraggable = draggable;
         if (draggable.BeginDrag()) {
             this.isDragging = true;
+            this.RegisterFirstMove();
             GameManager.Ins.TurnOffTut();
         } else {
             this.currentDraggable = null;
@@ -48,6 +49,7 @@ export class InputManager extends Ply_Singleton<InputManager> {
         stirring.BeginStir(event);
         if (stirring.IsStirring) {
             this.isDragging = true;
+            this.RegisterFirstMove();
             GameManager.Ins.TurnOffTut();
         } else {
             this.currentStirring = null;
@@ -77,17 +79,21 @@ export class InputManager extends Ply_Singleton<InputManager> {
     bindingEnd(event: EventTouch) {}
     bindingUpdate() {}
 
-    fisrtTap() {
-        if(this.isFirtMove) {
+    public RegisterFirstMove() {
+        if (GameManager.Ins?.IsPlaying() && this.isFirtMove) {
             this.isFirtMove = false;
             Ply_SoundManager.Ins?.PlayBgm();
-            ui.firstMove();
+            ui?.firstMove();
         }
+    }
+
+    /** @deprecated Use RegisterFirstMove(). */
+    fisrtTap() {
+        this.RegisterFirstMove();
     }
 
     isFirtMove: boolean = true;
     onTouchStart(event: EventTouch) {
-        this.fisrtTap();
         this.bindingStart(event);
     }
 

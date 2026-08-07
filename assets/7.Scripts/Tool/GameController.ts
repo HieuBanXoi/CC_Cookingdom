@@ -12,8 +12,8 @@ export class GameController extends Component {
 
   start() {
     playableHelper.gameStart();
-    const androidUrl = "https://play.google.com/store/apps/details?id=com.abi.packingdom";
-    const iosUrl = "https://apps.apple.com/us/app/packingdom/id6760441822";
+    const androidUrl = "https://play.google.com/store/apps/details?id=com.abi.cook.chill";
+    const iosUrl = "https://apps.apple.com/us/app/cookingdom/id6742222069";
     playableHelper.setStoreUrl(iosUrl, androidUrl); // this section only needs for Google and Unity channel
   }
 
@@ -21,7 +21,8 @@ export class GameController extends Component {
 
  
 
-  redirectToStore() {
+  static redirectToStore() {
+    console.log("GameController: redirectToStore called");
     playableHelper.gameEnd();
 
     playableHelper.redirect();

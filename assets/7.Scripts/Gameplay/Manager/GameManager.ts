@@ -5,6 +5,7 @@ import { IGameState } from './StateMachine/IGameState';
 import { OnPlayState } from './StateMachine/OnPlayState';
 import { WinState } from './StateMachine/WinState';
 import { LoseState } from './StateMachine/LoseState';
+import { StopGameState } from './StateMachine/StopGameState';
 import { GameController } from '../../Tool/GameController';
 
 const { ccclass, property } = _decorator;
@@ -86,6 +87,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
         if (this.currentState) {
             this.currentState.OnEnter(this);
         }
+        console.log(`GameManager: Changed state to ${newState.constructor.name}`);
     }
 
     public IsPlaying(): boolean {
@@ -100,6 +102,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
      * Redirect to store (Left empty for user to implement)
      */
     public GotoStore() {
+        
         GameController.redirectToStore();
     }
 
@@ -116,6 +119,11 @@ export class GameManager extends Ply_Singleton<GameManager> {
             World.instance?.ui?.offHand();
             this.isTutorial = false;
         }
+    }
+
+    /** Stops gameplay; the player's next touch anywhere redirects to the store. */
+    public StopGame() {
+        this.ChangeState(new StopGameState());
     }
 
     public WinGame() {
