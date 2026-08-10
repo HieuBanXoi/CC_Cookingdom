@@ -51,18 +51,6 @@ export class Item extends Ply_GameUnit {
     @property({ min: 0 })
     public blinkEffectScale: number = 1.0;
 
-    @property({ min: 0 })
-    public mergeEffectScale: number = 1.0;
-
-    @property
-    public playMoveToTargetFinishSound: boolean = false;
-
-    @property({ type: Enum(FxType) })
-    public moveToTargetFinishFxType: FxType = FxType.Complete;
-
-    @property
-    public fxSpawnZPos: number = 0;
-
     // References exposed on Cocos Creator Inspector
     @property({ type: ItemDraggable, tooltip: 'Cached ItemDraggable reference' })
     public itemDraggable: ItemDraggable | null = null;
@@ -81,6 +69,9 @@ export class Item extends Ply_GameUnit {
 
     @property({ type: Animation, tooltip: 'Cached Animation reference' })
     public animationComponent: Animation | null = null;
+
+    @property({ type: animation.AnimationController, tooltip: 'Cached AnimationController reference' })
+    public animationController: animation.AnimationController | null = null;
 
     private activeEffect: PoolMember | null = null;
 
@@ -112,6 +103,11 @@ export class Item extends Ply_GameUnit {
 
         if (refreshHiddenReferences || !this.animationComponent) {
             this.animationComponent = this.getComponent(Animation) || this.getComponentInChildren(Animation);
+        }
+
+        if (refreshHiddenReferences || !this.animationController) {
+            this.animationController = this.getComponent(animation.AnimationController)
+                || this.getComponentInChildren(animation.AnimationController);
         }
 
         if (refreshHiddenReferences || !this.itemMoveToTarget) {
@@ -192,9 +188,12 @@ export class Item extends Ply_GameUnit {
         if (!triggerName || triggerName.trim() === '') return;
 
         // 1. Support AnimationController (Animation Graph in Cocos 3.x)
-        const animController = this.getComponent(animation.AnimationController) || this.getComponentInChildren(animation.AnimationController);
-        if (animController) {
-            animController.setValue(triggerName, true);
+        if (!this.animationController) {
+            this.animationController = this.getComponent(animation.AnimationController)
+                || this.getComponentInChildren(animation.AnimationController);
+        }
+        if (this.animationController) {
+            this.animationController.setValue(triggerName, true);
             return;
         }
 
@@ -297,9 +296,6 @@ export class Item extends Ply_GameUnit {
         }
     }
 
-    public DoneAnimation() {
-        this.isDone = true;
-    }
 
     public SpawnHeartDone() {
         this.SpawnHeart();
@@ -307,6 +303,12 @@ export class Item extends Ply_GameUnit {
 
     public ItemDone() {
         this.isDone = true;
+    }
+
+    /** Marks the item complete, then returns it to its start position without a fail effect. */
+    public DoneAnimation() {
+        this.ItemDone();
+        this.itemDraggable?.ReturnToStartWithoutHeart();
     }
 
     public TurnOffActiveEffect() {
@@ -325,18 +327,12 @@ export class Item extends Ply_GameUnit {
         if (effect.node.parent !== this.node) {
             effect.node.setParent(this.node);
         }
-        effect.node.setPosition(0, 0, this.fxSpawnZPos);
+        effect.node.setPosition(0, 0, 0);
     }
 
     protected GetEffectSpawnPosition(): Vec3 {
         const spawnPos = this.node.worldPosition.clone();
-        spawnPos.z = this.fxSpawnZPos;
         return spawnPos;
-    }
-
-    public PlayMoveToTargetFinishSound() {
-        if (!this.playMoveToTargetFinishSound) return;
-        Ply_SoundManager.Ins.PlayFx(this.moveToTargetFinishFxType);
     }
 
     public DoOneStep() {

@@ -84,6 +84,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private isReturningToStart: boolean = false;
     private isForceReturningToStart: boolean = false;
     private spawnHeartOnReturnComplete: boolean = true;
+    private enableDraggableOnReturnComplete: boolean = false;
     private consumeCurrentDropFail: boolean = false;
     private pendingDragDelta: Vec2 = new Vec2();
 
@@ -227,8 +228,9 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.onDropSuccess.invoke(dropTarget);
     }
 
-    public ReturnToStart(spawnHeart: boolean = true) {
+    public ReturnToStart(spawnHeart: boolean = true, enableDraggableOnComplete: boolean = false) {
         this.spawnHeartOnReturnComplete = spawnHeart;
+        this.enableDraggableOnReturnComplete = enableDraggableOnComplete;
         this.isReturningToStart = true;
         Tween.stopAllByTarget(this.node);
 
@@ -255,7 +257,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
     /** Returns the item to its start position without spawning a failed-drag heart. */
     public ReturnToStartWithoutHeart() {
-        this.ReturnToStart(false);
+        this.ReturnToStart(false, true);
     }
 
     /** Finds an active Item under the dropped item's center whose type matches targetItemType. */
@@ -394,5 +396,10 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private OnReturnToStartComplete() {
         this.FinalizeFailedDrag(this.spawnHeartOnReturnComplete);
         this.spawnHeartOnReturnComplete = true;
+
+        if (this.enableDraggableOnReturnComplete) {
+            this.enableDraggableOnReturnComplete = false;
+            this.EnableComponent();
+        }
     }
 }

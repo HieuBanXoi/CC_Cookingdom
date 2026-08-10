@@ -1,7 +1,7 @@
 import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, Vec3 } from 'cc';
 import { Item } from '../ItemTool/Item';
 import { ItemType } from '../ItemTool/ItemType';
-import { ItemStirring, StirMovementMode } from '../ItemTool/ItemStirring';
+import { ItemStirring } from '../ItemTool/ItemStirring';
 import { Ply_Singleton } from '../Tool/Ply_Singleton';
 
 const { ccclass, property } = _decorator;
@@ -286,24 +286,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     private playStirringHint(stirring: ItemStirring): void {
-        if (stirring.movementMode === StirMovementMode.Line) {
-            const center = stirring.centerPoint ?? stirring.node;
-            const halfLength = stirring.lineLength * 0.5;
-            const centerPosition = center.worldPosition;
-            const start = new Vec3(
-                centerPosition.x - stirring.lineDirection.x * halfLength,
-                centerPosition.y - stirring.lineDirection.y * halfLength,
-                centerPosition.z,
-            );
-            const end = new Vec3(
-                centerPosition.x + stirring.lineDirection.x * halfLength,
-                centerPosition.y + stirring.lineDirection.y * halfLength,
-                centerPosition.z,
-            );
-            this.playMoveHintPositions(start, end);
-            return;
-        }
-
         const center = (stirring.centerPoint ?? stirring.node).worldPosition.clone();
         const radius = Math.max(1, stirring.stirRadius);
         const start = new Vec3(center.x + radius, center.y, center.z);
@@ -321,16 +303,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
                 .delay(this.waitAtEndDuration)
                 .call(loop)
                 .start();
-        };
-        loop();
-    }
-
-    private playMoveHintPositions(start: Vec3, end: Vec3): void {
-        const token = this.prepareHand(start);
-        const loop = () => {
-            if (!this.isHintCurrent(token)) return;
-            this.handNode.setWorldPosition(start);
-            tween(this.handNode).to(this.moveDuration, { worldPosition: end }, { easing: 'sineInOut' }).delay(this.waitAtEndDuration).call(loop).start();
         };
         loop();
     }

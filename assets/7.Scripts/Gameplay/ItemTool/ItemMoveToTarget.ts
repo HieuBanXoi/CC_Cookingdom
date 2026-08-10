@@ -2,6 +2,7 @@ import { _decorator, Node, Tween, tween, Vec2, Vec3, Enum, EventHandler } from '
 import { GameManager } from '../Manager/GameManager';
 import { Item } from './Item';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
+import { FxType, Ply_SoundManager } from '../Tool/Ply_SoundManager';
 
 const { ccclass, property } = _decorator;
 
@@ -56,17 +57,21 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
     public onComplete: EventHandler[] = [];
 
     @property
+    public playMoveToTargetFinishSound: boolean = false;
+
+    @property({ type: Enum(FxType) })
+    public moveToTargetFinishFxType: FxType = FxType.Complete;
+
+    @property
     public lockInputWhileMoving: boolean = true;
 
     @property
     public resetParentBeforeMove: boolean = true;
 
     private originalParent: Node | null = null;
-    private item: Item | null = null;
 
     protected onLoad() {
         this.originalParent = this.node.parent;
-        this.item = this.getComponent(Item);
     }
 
     public ExecuteMove() {
@@ -181,8 +186,8 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
             GameManager.Ins.isPlaying = true;
         }
 
-        if (this.item) {
-            this.item.PlayMoveToTargetFinishSound();
+        if (this.playMoveToTargetFinishSound) {
+            Ply_SoundManager.Ins.PlayFx(this.moveToTargetFinishFxType);
         }
 
         EventHandler.emitEvents(this.onComplete);
