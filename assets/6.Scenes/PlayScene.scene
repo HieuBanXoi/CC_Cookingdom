@@ -611,7 +611,7 @@
     "__type__": "FxAudio",
     "fxType": 21,
     "audioClip": {
-      "__uuid__": "95213e24-d8fa-4657-afdc-0550d08e0ec0",
+      "__uuid__": "6b095484-8554-471b-ade2-028284a9b7da",
       "__expectedType__": "cc.AudioClip"
     },
     "volume": 1
