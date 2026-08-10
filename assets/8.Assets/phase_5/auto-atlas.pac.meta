@@ -12,7 +12,7 @@
     "maxHeight": 2048,
     "padding": 2,
     "allowRotation": true,
-    "forceSquared": false,
+    "forceSquared": true,
     "powerOfTwo": false,
     "algorithm": "MaxRects",
     "format": "png",

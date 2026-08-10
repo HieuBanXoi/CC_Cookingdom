@@ -38,6 +38,13 @@ export class UI extends Component {
     endcard: Node = null!;
     @property(Node)
     winCard: Node = null!;
+    @property()
+    isGoogleBuild: boolean = false;
+    @property([Node])
+    downloadBtns: Node[] = [];
+    @property([Animation])
+    textAnims: Animation[] = []
+
     win: boolean = false;
 
     resizeFuncs: Function[] = [];
@@ -45,16 +52,13 @@ export class UI extends Component {
 
     onLoad() {
         ui = this;
-        
-        // try {
-        //     if(window.redirectStore.toString() == "function redirectStore(){window.open(clickTag)}") {
-        //         this.offButtons.forEach(node => node.active = false);
-        //     }
-            
-            
-        // } catch (error) {
-            
-        // }
+        this.isGoogleBuild = typeof window !== 'undefined'
+            && ((window as any).__IS_GOOGLE_BUILD__ === true
+                || typeof (window as any).clickTag !== 'undefined');
+
+        if (this.isGoogleBuild) {
+            this.downloadBtns.forEach(node => node.active = false);
+        }
     }
 
     bindingToStore() {
@@ -71,8 +75,13 @@ export class UI extends Component {
     firstMove() {
         if(this.first) {
             this.first = false;
-            this.fisrtOn.forEach(node => node.active = true);
+            this.fisrtOn.forEach(node => {
+                node.active = !(this.isGoogleBuild && this.downloadBtns.includes(node));
+            });
             this.firstOff.forEach(node => node.active = false);
+            if (this.isGoogleBuild) {
+                this.downloadBtns.forEach(node => node.active = false);
+            }
         }
     }
 
@@ -337,6 +346,9 @@ export class UI extends Component {
     }
 
     start() {
+        if (this.isGoogleBuild) {
+            this.textAnims.forEach(anim => anim.stop());
+        }
     }
 
     update(dt: number) {

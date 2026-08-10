@@ -29,6 +29,16 @@
             }
           }
         }
+      },
+      "ea1irUXP9NkrKyFE2s6xma": {
+        "name": "BG",
+        "options": {
+          "web": {
+            "webp": {
+              "quality": 50
+            }
+          }
+        }
       }
     }
   }

@@ -13,6 +13,8 @@ export class Crust extends Item {
     @property({type: Node})
     public pan: Node = null;
 
+    public foodInCount: number = 0;
+
     private moveToTargetEventNode: Node | null = null;
 
     protected onLoad(): void {
@@ -39,7 +41,13 @@ export class Crust extends Item {
             GameManager.Ins?.StopGame();
         }
     }
-
+    public AddFood(animString: string){
+        this.foodInCount++;
+        ComponentCache.get(this.node, AnimationControllerHelper)?.PlayTrigger(animString);
+        if(this.foodInCount >= 6){
+            this.CanRoll();
+        }
+    }
     public CanRoll(){
         this.itemClickable.enabled = true;
         this.itemClickable.canClick = true;

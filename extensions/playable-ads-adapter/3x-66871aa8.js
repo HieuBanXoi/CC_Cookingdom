@@ -55,9 +55,9 @@ f = () => {
           sdkScript: "",
         },
         Google: {
-          head: "<meta name='ad.size' content=\"width=320,height=480\" >",
+          head: "<script>window.__IS_GOOGLE_BUILD__=true;</script><meta name='ad.size' content=\"width=320,height=480\" >",
           sdkScript: "",
-          body: "<script>var clickTag='';var android='';function setStoreUrl(iosUrl, androidUrl){clickTag=iosUrl;android=androidUrl;if(/android/i.test(navigator.userAgent)){clickTag=android}};function redirectStore(){window.open(clickTag)}</script>",
+          body: "<script>window.__IS_GOOGLE_BUILD__=true;var clickTag='';var android='';function setStoreUrl(iosUrl, androidUrl){clickTag=iosUrl;android=androidUrl;if(/android/i.test(navigator.userAgent)){clickTag=android}};function redirectStore(){window.open(clickTag)}</script>",
         },
         Mintegral: {
           head: "",
