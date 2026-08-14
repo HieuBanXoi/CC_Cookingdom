@@ -48,6 +48,11 @@ export class HeartEffect extends PoolMember {
         this.scheduleOnce(this.DeSpawn, lifeTime);
     }
 
+    /** Keep the feedback upright even while its owning draggable item rotates. */
+    protected lateUpdate(): void {
+        this.node.setWorldRotationFromEuler(0, 0, 0);
+    }
+
     public DeSpawn() {
         this.ResetState();
         World.instance?.poolManager?.despawn(this);
@@ -74,5 +79,6 @@ export class HeartEffect extends PoolMember {
             this.node.setScale(this.defaultScale);
             this.node.eulerAngles = this.defaultLocalEulerAngles;
         }
+        this.node.setWorldRotationFromEuler(0, 0, 0);
     }
 }

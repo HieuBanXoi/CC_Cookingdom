@@ -16,7 +16,9 @@ export enum ItemType {
     Paper,
     Trash,
     PanCanStir,
-    Crust
+    Crust, PanStep1,
+    PanStep2,
+    PanStep3,
 
 }
 Enum(ItemType);

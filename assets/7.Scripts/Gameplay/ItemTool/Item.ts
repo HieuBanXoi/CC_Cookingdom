@@ -328,6 +328,7 @@ export class Item extends Ply_GameUnit {
             effect.node.setParent(this.node);
         }
         effect.node.setPosition(0, 0, 0);
+        effect.node.setWorldRotationFromEuler(0, 0, 0);
     }
 
     protected GetEffectSpawnPosition(): Vec3 {

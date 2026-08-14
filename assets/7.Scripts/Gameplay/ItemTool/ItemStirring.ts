@@ -1,4 +1,4 @@
-import { _decorator, Animation, AnimationState, Node, Vec2, Vec3, EventTouch } from 'cc';
+import { _decorator, animation, Animation, AnimationState, Node, Vec2, Vec3, EventTouch } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
@@ -23,6 +23,12 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
     @property({ tooltip: 'Clip to play. Leave empty to use the first clip on Stir Animation.' })
     public stirAnimationClipName: string = '';
+
+    @property({ type: animation.AnimationController, tooltip: 'Optional Animation Controller used instead of Stir Animation.' })
+    public stirAnimationController: animation.AnimationController | null = null;
+
+    @property({ tooltip: 'Trigger set on Stir Animation Controller when stirring begins.' })
+    public stirControllerTrigger: string = '';
 
     @property({ min: 0.01, tooltip: 'Slowest speed while the player is holding the stirring interaction.' })
     public minAnimationSpeed: number = 0.1;
@@ -64,7 +70,11 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
         if (this.stirrerTransform) this.stirrerTransform.active = true;
 
-        this.resumeStirAnimation();
+        if (this.UsesAnimationController()) {
+            this.stirAnimationController!.setValue(this.stirControllerTrigger.trim(), true);
+        } else {
+            this.resumeStirAnimation();
+        }
 
         Ply_SoundManager.Ins.PlayFxLoop(FxType.Stirring);
         this.onStirBegin.invoke();
@@ -74,6 +84,8 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         this.isDone = false;
         this.isStirring = false;
         this.currentProgress = 0;
+        if (this.UsesAnimationController()) return;
+
         const state = this.getStirAnimationState();
         if (state) {
             state.pause();
@@ -91,6 +103,10 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
         this.moveStirrerToTouch(curTouchPos);
 
+        // A controller owns the animation timing. Touch movement still moves
+        // the visual stirrer, but it does not attempt to alter clip speed.
+        if (this.UsesAnimationController()) return;
+
         const state = this.getStirAnimationState();
         if (!state) return;
 
@@ -101,12 +117,17 @@ export class ItemStirring extends Ply_EventHandlerComponent {
     public EndStir() {
         if (this.isDone) return;
         this.isStirring = false;
-        this.stirAnimationState?.pause();
+        if (!this.UsesAnimationController()) this.stirAnimationState?.pause();
         Ply_SoundManager.Ins.StopFxLoop(FxType.Stirring);
     }
 
     protected update(): void {
         if (!this.isStirring || this.isDone) return;
+
+        // Animation controllers do not expose a generic clip progress API.
+        // Add an Animation Event on the controller's stir clip that calls
+        // CompleteStir() on this component.
+        if (this.UsesAnimationController()) return;
 
         const state = this.getStirAnimationState();
         if (!state || state.duration <= 0) return;
@@ -118,7 +139,11 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         }
     }
 
-    private CompleteStir() {
+    /**
+     * Finishes stirring. For an Animation Controller, call this from an
+     * Animation Event at the end of the controller's stirring clip.
+     */
+    public CompleteStir() {
         if (this.isDone) return;
         this.isDone = true;
         this.isStirring = false;
@@ -149,6 +174,10 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         } else if (!state.isPlaying) {
             this.stirAnimation?.play(state.name);
         }
+    }
+
+    private UsesAnimationController(): boolean {
+        return !!this.stirAnimationController && !!this.stirControllerTrigger.trim();
     }
 
     private getStirAnimationState(): AnimationState | null {
