@@ -14,6 +14,8 @@ export class BreakHeartEffect extends PoolMember {
     private defaultScale = new Vec3(1, 1, 1);
     private defaultLocalEulerAngles = new Vec3(0, 0, 0);
     private isDefaultStateCached = false;
+    private wobbleTween: Tween<{ angle: number }> | null = null;
+    private readonly wobbleState = { angle: 0 };
 
     public PlaySpawnWithScale(scaleMultiplier: number): void {
         this.PlaySpawn(this.defaultLifeTime, scaleMultiplier);
@@ -35,10 +37,8 @@ export class BreakHeartEffect extends PoolMember {
         Tween.stopAllByTarget(this.node);
         tween(this.node)
             .to(0.25, { scale: targetScale }, { easing: 'backOut' })
-            .to(0.12, { eulerAngles: new Vec3(0, 0, 3) }, { easing: 'sineOut' })
-            .to(0.18, { eulerAngles: new Vec3(0, 0, -3) }, { easing: 'sineInOut' })
-            .to(0.12, { eulerAngles: this.defaultLocalEulerAngles }, { easing: 'sineIn' })
             .start();
+        this.playWorldSpaceWobble();
 
         this.scheduleOnce(this.DeSpawn, lifeTime);
     }
@@ -61,10 +61,31 @@ export class BreakHeartEffect extends PoolMember {
     private resetState(): void {
         this.unschedule(this.DeSpawn);
         Tween.stopAllByTarget(this.node);
+        this.wobbleTween?.stop();
+        this.wobbleTween = null;
+        this.wobbleState.angle = 0;
 
         if (this.isDefaultStateCached) {
             this.node.setScale(this.defaultScale);
             this.node.eulerAngles = this.defaultLocalEulerAngles;
         }
+        this.node.setWorldRotationFromEuler(0, 0, 0);
+    }
+
+    private playWorldSpaceWobble(): void {
+        this.wobbleTween?.stop();
+        this.wobbleState.angle = 0;
+        this.node.setWorldRotationFromEuler(0, 0, 0);
+        this.wobbleTween = tween(this.wobbleState)
+            .delay(0.25)
+            .to(0.12, { angle: 3 }, { easing: 'sineOut', onUpdate: value => this.applyWorldRotation(value.angle) })
+            .to(0.18, { angle: -3 }, { easing: 'sineInOut', onUpdate: value => this.applyWorldRotation(value.angle) })
+            .to(0.12, { angle: 0 }, { easing: 'sineIn', onUpdate: value => this.applyWorldRotation(value.angle) })
+            .call(() => this.wobbleTween = null)
+            .start();
+    }
+
+    private applyWorldRotation(angle: number): void {
+        this.node.setWorldRotationFromEuler(0, 0, angle);
     }
 }

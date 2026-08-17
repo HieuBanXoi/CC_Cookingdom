@@ -78,6 +78,16 @@
         "frame": 2,
         "func": "CompleteStir",
         "params": []
+      },
+      {
+        "frame": 2,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 2,
+        "func": "ShowNextStepBubbleHint",
+        "params": []
       }
     ],
     "_embeddedPlayers": []

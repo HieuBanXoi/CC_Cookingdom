@@ -208,13 +208,16 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.ResetScale();
             this.onDropFail.invoke();
             if (!this.consumeCurrentDropFail) {
+                // Show the failure feedback at the rejected drop position,
+                // before this item starts travelling back to its origin.
+                if (this.spawnBreakHeartOnDropFail && this.item) {
+                    this.item.SpawnBreakHeart();
+                }
+
                 if (this.returnToStartOnDragFailed) {
-                    // A failed drop always returns with the break-heart effect.
-                    // ReturnToStartWithoutHeart remains available for explicit
-                    // gameplay events that need a silent/manual return.
-                    this.ReturnToStart(true);
+                    this.ReturnToStart(false);
                 } else {
-                    this.FinalizeFailedDrag(true);
+                    this.FinalizeFailedDrag(false);
                 }
             } else {
                 this.SetShadowActive(true);
@@ -225,6 +228,10 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         // Drop Success
         this.ResetScale();
         this.SetShadowActive(true);
+        // Let Pan hide its ingredient bubble for every successful drop.
+        // This also supports ItemToTarget configurations whose target is a
+        // child node inside a Pan rather than the Pan node itself.
+        this.HidePanBubbleHint(dropTarget);
         this.onDropSuccess.invoke(dropTarget);
     }
 
@@ -377,6 +384,18 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private PlayReturnToStartFinishSound() {
         if (!this.playReturnToStartFinishSound) return;
         Ply_SoundManager.Ins.PlayFx(this.returnToStartFinishFxType);
+    }
+
+    private HidePanBubbleHint(target: Node): void {
+        let current: Node | null = target;
+        while (current) {
+            const pan = current.getComponent('Pan') as any;
+            if (pan?.HideBubbleHintForSuccessfulDrop) {
+                pan.HideBubbleHintForSuccessfulDrop();
+                return;
+            }
+            current = current.parent;
+        }
     }
 
     private FinalizeFailedDrag(spawnHeart: boolean) {

@@ -27,6 +27,26 @@
     "_exoticAnimation": null,
     "_events": [
       {
+        "frame": 0.6666666666666666,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.6666666666666666,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.6666666666666666,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.6666666666666666,
+        "func": "",
+        "params": []
+      },
+      {
         "frame": 0.75,
         "func": "",
         "params": []
@@ -34,6 +54,11 @@
       {
         "frame": 0.75,
         "func": "SpawnHeart",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "DoOneStep",
         "params": []
       }
     ],

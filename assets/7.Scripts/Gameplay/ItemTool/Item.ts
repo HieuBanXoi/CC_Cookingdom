@@ -15,6 +15,7 @@ import { ItemClickable } from './ItemClickable';
 import { ItemStirring } from './ItemStirring';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { ItemSound } from './ItemSound';
+import { PhaseManager } from '../Manager/PhaseManager';
 
 const { ccclass, property } = _decorator;
 
@@ -337,6 +338,6 @@ export class Item extends Ply_GameUnit {
     }
 
     public DoOneStep() {
-        // Step callback
+        PhaseManager.Ins?.DoOneStep();
     }
 }

@@ -31,7 +31,33 @@
       }
     ],
     "_exoticAnimation": null,
-    "_events": [],
+    "_events": [
+      {
+        "frame": 0.5,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.5,
+        "func": "PlayCreamSound",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "PlayFryingSound",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "ShowNextStepBubbleHint",
+        "params": []
+      }
+    ],
     "_embeddedPlayers": []
   },
   {

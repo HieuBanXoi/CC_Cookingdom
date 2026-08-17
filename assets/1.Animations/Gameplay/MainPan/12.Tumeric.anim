@@ -22,7 +22,38 @@
       }
     ],
     "_exoticAnimation": null,
-    "_events": [],
+    "_events": [
+      {
+        "frame": 0.48333333333333334,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.48333333333333334,
+        "func": "PlayPlaceFoodSound",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.75,
+        "func": "ShowNextStepBubbleHint",
+        "params": []
+      }
+    ],
     "_embeddedPlayers": []
   },
   {

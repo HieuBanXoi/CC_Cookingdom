@@ -1,4 +1,4 @@
-import { _decorator, animation, Animation, AnimationState, Node, Vec2, Vec3, EventTouch } from 'cc';
+import { _decorator, animation, Animation, AnimationState, Node, Sprite, SpriteFrame, Vec2, Vec3, EventTouch } from 'cc';
 import { Ply_SoundManager, FxType } from '../Tool/Ply_SoundManager';
 import { Ply_Event } from '../Tool/Ply_Event';
 import { Ply_EventHandlerComponent } from '../Tool/Ply_EventHandlerComponent';
@@ -17,6 +17,15 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
     @property(Node)
     public centerPoint: Node = null!;
+
+    @property({ type: Sprite, tooltip: 'Sprite whose appearance changes while stirring. If empty, the first Sprite on this node is used.' })
+    public stateSprite: Sprite | null = null;
+
+    @property({ type: SpriteFrame, tooltip: 'Sprite shown while the player is stirring.' })
+    public stirringSpriteFrame: SpriteFrame | null = null;
+
+    @property({ type: SpriteFrame, tooltip: 'Sprite shown before stirring and after stirring completes.' })
+    public idleSpriteFrame: SpriteFrame | null = null;
 
     @property({ type: Animation, tooltip: 'Animation used as stirring progress. If empty, the Animation on stirrerTransform is used.' })
     public stirAnimation: Animation | null = null;
@@ -59,9 +68,14 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         return this.isStirring;
     }
 
+    protected onLoad(): void {
+        this.ShowIdleSprite();
+    }
+
     public BeginStir(event?: EventTouch) {
         if (!GameManager.Ins?.IsPlaying() || this.isDone || !this.enabled) return;
         this.isStirring = true;
+        this.ShowStirringSprite();
 
         if (event) {
             const touchPos = event.getUILocation();
@@ -84,6 +98,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         this.isDone = false;
         this.isStirring = false;
         this.currentProgress = 0;
+        this.ShowIdleSprite();
         if (this.UsesAnimationController()) return;
 
         const state = this.getStirAnimationState();
@@ -147,6 +162,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         if (this.isDone) return;
         this.isDone = true;
         this.isStirring = false;
+        this.ShowIdleSprite();
         if (this.stirAnimationState) {
             this.stirAnimationState.setTime(this.stirAnimationState.duration);
             this.stirAnimationState.sample();
@@ -178,6 +194,26 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
     private UsesAnimationController(): boolean {
         return !!this.stirAnimationController && !!this.stirControllerTrigger.trim();
+    }
+
+    /** Changes to the visual used while the spatula is at the stirring target. */
+    public ShowStirringSprite(): void {
+        this.applyStateSprite(this.stirringSpriteFrame);
+    }
+
+    /** Restores the visual used before stirring and after it completes. */
+    public ShowIdleSprite(): void {
+        this.applyStateSprite(this.idleSpriteFrame);
+    }
+
+    private applyStateSprite(spriteFrame: SpriteFrame | null): void {
+        if (!spriteFrame) return;
+
+        if (!this.stateSprite) {
+            this.stateSprite = this.getComponent(Sprite) || this.getComponentInChildren(Sprite);
+        }
+
+        if (this.stateSprite) this.stateSprite.spriteFrame = spriteFrame;
     }
 
     private getStirAnimationState(): AnimationState | null {

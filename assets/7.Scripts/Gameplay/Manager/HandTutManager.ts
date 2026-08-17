@@ -51,6 +51,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private idleTimer = 0;
     private isStarted = false;
+    private isPaused = false;
     private isPointerDown = false;
     private isGameplayDragging = false;
     private shownCount = 0;
@@ -85,7 +86,16 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     protected update(deltaTime: number): void {
         this.removeCompletedItems();
-        if (!this.isStarted || !this.handNode) return;
+        if (!this.isStarted || this.isPaused || !this.handNode) return;
+
+        // A phase can deactivate an item while its hint is already playing.
+        // Hide it immediately so the hand never points to invisible content.
+        if (this.currentItemHandTut
+            && (!this.currentItemHandTut.node.activeInHierarchy || this.currentItemHandTut.isDone)) {
+            this.hideHandTut();
+            this.resetIdleTimer();
+            return;
+        }
 
         if (this.isPointerDown || this.isGameplayDragging) {
             this.resetIdleTimer();
@@ -108,6 +118,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     public StartHandTut(): void {
+        this.isPaused = false;
         this.isStarted = true;
         this.resetIdleTimer();
     }
@@ -116,6 +127,15 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         this.forceNoDelay = true;
         this.StartHandTut();
         this.showNextHandTut();
+    }
+
+    /** Stops the idle timer and hides the current hint during a phase transition. */
+    public PauseHandTut(): void {
+        this.isPaused = true;
+        this.isPointerDown = false;
+        this.isGameplayDragging = false;
+        this.hideHandTut();
+        this.resetIdleTimer();
     }
 
     public ItemDone(item: Item): void {
@@ -142,6 +162,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     private onTouchStart(): void {
+        if (this.isPaused) return;
         this.isPointerDown = true;
         if (!this.isStarted) this.StartHandTut();
         this.hideHandTut();

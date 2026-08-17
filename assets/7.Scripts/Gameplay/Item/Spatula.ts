@@ -82,6 +82,7 @@ export class Spatula extends Item {
 
         stirring.EnableComponent();
         stirring.ResetStir();
+        stirring.ShowStirringSprite();
     }
 
     /** Called by ItemStirring after its configured progress animation completes. */
@@ -89,6 +90,7 @@ export class Spatula extends Item {
         if (!this.isStirringAtTarget) return;
 
         this.isStirringAtTarget = false;
+        this.itemStirring?.ShowIdleSprite();
         this.itemStirring?.EndStir();
         this.itemStirring?.DisableComponent();
         this.ReturnAfterStir();

@@ -1,4 +1,5 @@
 import { _decorator, Component, Node, input, Input, EventTouch } from 'cc';
+import { PREVIEW } from 'cc/env';
 import { Ply_Singleton } from '../Tool/Ply_Singleton';
 import { World } from '../../Manager/World';
 import { IGameState } from './StateMachine/IGameState';
@@ -27,6 +28,12 @@ export class GameManager extends Ply_Singleton<GameManager> {
 
     @property
     public countMove: number = 0;
+
+    @property({ tooltip: 'Show a browser confirmation dialog before redirecting to the store in Web Preview only.' })
+    public showStoreDialogInWebPreview = true;
+
+    @property({ tooltip: 'Message displayed by the Web Preview store dialog.' })
+    public storeDialogMessage = 'Open the store?';
 
     @property
     public currentLayer: number = 0;
@@ -102,6 +109,12 @@ export class GameManager extends Ply_Singleton<GameManager> {
      * Redirect to store (Left empty for user to implement)
      */
     public GotoStore() {
+        // PREVIEW is true only for Cocos Editor's browser preview. A built
+        // web/native game bypasses this dialog and redirects immediately.
+        if (PREVIEW && this.showStoreDialogInWebPreview && typeof window !== 'undefined') {
+            const shouldOpenStore = window.confirm(this.storeDialogMessage);
+            if (!shouldOpenStore) return;
+        }
 
         GameController.redirectToStore();
     }
