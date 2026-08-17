@@ -1,9 +1,12 @@
 import { IGameState } from './IGameState';
 import { GameManager } from '../GameManager';
 import { World } from '../../../Manager/World';
+import { AppLovinAnalytics } from '../../../Tool/AppLovinAnalytics';
 
 export class LoseState implements IGameState {
     public OnEnter(gameManager: GameManager): void {
+        AppLovinAnalytics.endcardShown();
+        AppLovinAnalytics.challengeFailed();
         World.instance?.ui?.onLose();
         gameManager.isGotoStore = true;
         gameManager.isPlaying = false;

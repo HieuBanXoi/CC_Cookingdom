@@ -8,6 +8,7 @@ import { WinState } from './StateMachine/WinState';
 import { LoseState } from './StateMachine/LoseState';
 import { StopGameState } from './StateMachine/StopGameState';
 import { GameController } from '../../Tool/GameController';
+import { AppLovinAnalytics } from '../../Tool/AppLovinAnalytics';
 
 const { ccclass, property } = _decorator;
 
@@ -40,14 +41,18 @@ export class GameManager extends Ply_Singleton<GameManager> {
 
     private currentState: IGameState | null = null;
     private preventNativeTouch: ((event: TouchEvent) => void) | null = null;
+    private isFirstTouch: boolean = true;
 
     protected onLoad() {
         super.onLoad();
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         this.disableBrowserTouchGestures();
+        AppLovinAnalytics.startLoading();
     }
 
     protected start() {
+        AppLovinAnalytics.loaded();
+        AppLovinAnalytics.displayed();
         this.ChangeState(new OnPlayState());
     }
 
@@ -67,6 +72,11 @@ export class GameManager extends Ply_Singleton<GameManager> {
     }
 
     private onTouchStart(event: EventTouch) {
+        if (this.isFirstTouch) {
+            this.isFirstTouch = false;
+            AppLovinAnalytics.challengeStarted();
+        }
+
         if (this.isGotoStore) {
             this.GotoStore();
         }
@@ -115,7 +125,7 @@ export class GameManager extends Ply_Singleton<GameManager> {
             const shouldOpenStore = window.confirm(this.storeDialogMessage);
             if (!shouldOpenStore) return;
         }
-
+        AppLovinAnalytics.ctaClicked();
         GameController.redirectToStore();
     }
 
@@ -151,5 +161,14 @@ export class GameManager extends Ply_Singleton<GameManager> {
         this.isLoseGame = true;
         this.isPlaying = false;
         this.ChangeState(new LoseState());
+    }
+    public Applovin25(){
+        AppLovinAnalytics.challenge25();
+    }
+    public Applovin50(){
+        AppLovinAnalytics.challenge50();
+    }
+    public Applovin75(){
+        AppLovinAnalytics.challenge75();
     }
 }
