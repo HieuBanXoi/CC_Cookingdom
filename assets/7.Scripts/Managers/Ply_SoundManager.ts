@@ -34,7 +34,9 @@ export enum FxType {
     TurnOnStove,
     Win,
     Lose,
-    Cat
+    Cat,
+    WaterDrop,
+    WaterOut
 }
 Enum(FxType);
 

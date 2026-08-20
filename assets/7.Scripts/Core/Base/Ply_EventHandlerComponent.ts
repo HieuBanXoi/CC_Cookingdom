@@ -20,4 +20,8 @@ export class Ply_EventHandlerComponent extends Component {
     public DisableComponent(): void {
         this.enabled = false;
     }
+
+    protected onLoad(): void {}
+    protected start(): void {}
+    protected onDestroy(): void {}
 }
