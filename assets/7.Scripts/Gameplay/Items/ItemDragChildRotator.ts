@@ -1,5 +1,6 @@
 import { _decorator, Component, Enum, Node, Quat, tween, Tween, Vec3 } from 'cc';
 import { ItemDraggable } from './ItemDraggable';
+import { Ply_EventHandlerComponent } from '../../Core/Base/Ply_EventHandlerComponent';
 
 const { ccclass, property, requireComponent } = _decorator;
 
@@ -18,7 +19,7 @@ Enum(DragRotationEase);
  */
 @ccclass('ItemDragChildRotator')
 @requireComponent(ItemDraggable)
-export class ItemDragChildRotator extends Component {
+export class ItemDragChildRotator extends Ply_EventHandlerComponent {
     @property({ type: Node, tooltip: 'Child to rotate. Uses this node when empty.' })
     public rotateTarget: Node | null = null;
 

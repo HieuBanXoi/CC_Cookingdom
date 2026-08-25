@@ -340,4 +340,62 @@ export class Item extends Ply_GameUnit {
     public DoOneStep() {
         PhaseManager.Ins?.DoOneStep();
     }
+
+    public EnableItemDraggable() {
+        if (!this.itemDraggable) {
+            this.itemDraggable = this.getComponent(ItemDraggable) || ComponentCache.get(this.node, ItemDraggable);
+        }
+        if (this.itemDraggable) {
+            this.itemDraggable.enabled = true;
+            this.itemDraggable.isDraggable = true;
+        }
+    }
+
+    public DisableItemDraggable() {
+        if (this.itemDraggable) {
+            this.itemDraggable.enabled = false;
+        }
+    }
+
+    public EnableItemClickable() {
+        if (!this.itemClickable) {
+            this.itemClickable = this.getComponent(ItemClickable) || ComponentCache.get(this.node, ItemClickable);
+        }
+        if (this.itemClickable) {
+            this.itemClickable.enabled = true;
+            this.itemClickable.canClick = true;
+        }
+    }
+
+    public DisableItemClickable() {
+        if (this.itemClickable) {
+            this.itemClickable.enabled = false;
+        }
+    }
+
+    public EnableClick() {
+        if (!this.itemClickable) {
+            this.itemClickable = this.getComponent(ItemClickable) || ComponentCache.get(this.node, ItemClickable);
+        }
+        this.itemClickable?.EnableClick();
+    }
+
+    public DisableClick() {
+        this.itemClickable?.DisableClick();
+    }
+
+    public EnableItemStirring() {
+        if (!this.itemStirring) {
+            this.itemStirring = this.getComponent(ItemStirring) || ComponentCache.get(this.node, ItemStirring);
+        }
+        if (this.itemStirring) {
+            this.itemStirring.enabled = true;
+        }
+    }
+
+    public DisableItemStirring() {
+        if (this.itemStirring) {
+            this.itemStirring.enabled = false;
+        }
+    }
 }
