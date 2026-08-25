@@ -42,10 +42,10 @@
             "_value": false
           },
           "mask": {
-            "_value": false
+            "_value": true
           },
           "graphics": {
-            "_value": false
+            "_value": true
           },
           "ui-skew": {
             "_value": false
@@ -198,10 +198,11 @@
           "audio",
           "base",
           "custom-pipeline",
-          "custom-pipeline-post-process",
           "gfx-webgl",
           "gfx-webgl2",
+          "graphics",
           "marionette",
+          "mask",
           "particle-2d",
           "procedural-animation",
           "tween",
