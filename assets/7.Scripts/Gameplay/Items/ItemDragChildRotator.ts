@@ -58,6 +58,7 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
         this.itemDraggable?.onBeginDrag.removeListener(this.RotateOnDrag);
         this.itemDraggable?.onDropFail.removeListener(this.HandleDropFail);
         this.unschedule(this.RotateBack);
+        this.unschedule(this.RotateBackAndSpawnBreakHeart);
         this.StopRotationTween();
     }
 
@@ -81,17 +82,51 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
         this.SetEulerAngles(this.originalEulerAngles);
     }
 
+    /**
+     * Changes the resting rotation used before dragging and after a failed drop.
+     * This is useful when an item's resting pose changes during gameplay.
+     */
+    public SetOriginalRotation(eulerAngles: Vec3, applyImmediately: boolean = false): void {
+        Vec3.copy(this.originalEulerAngles, eulerAngles);
+        this.hasOriginalRotation = true;
+
+        if (applyImmediately) {
+            this.unschedule(this.RotateBack);
+            this.StopRotationTween();
+            this.SetEulerAngles(this.originalEulerAngles);
+        }
+    }
+
     private HandleDropFail = (): void => {
+        const shouldSpawnBreakHeart = !!this.itemDraggable?.spawnBreakHeartOnDropFail;
+        if (shouldSpawnBreakHeart) {
+            this.itemDraggable?.SuppressCurrentDropFailEffect();
+        }
+
         // ItemDraggable calls onDropFail just before ReturnToStart(). When the
         // rotation target is the draggable node itself, ReturnToStart() stops
         // every tween on that node. Deferring one frame lets its reparent/return
         // tween be created first, so this rotation tween is not cancelled.
         if (this.GetRotateTarget() === this.node) {
-            this.unschedule(this.RotateBack);
-            this.scheduleOnce(this.RotateBack, 0);
+            this.unschedule(this.RotateBackAndSpawnBreakHeart);
+            this.scheduleOnce(this.RotateBackAndSpawnBreakHeart, 0);
             return;
         }
-        this.RotateBack();
+        this.RotateBackAndSpawnBreakHeart();
+    };
+
+    private RotateBackAndSpawnBreakHeart = (): void => {
+        if (!this.hasOriginalRotation) {
+            this.SpawnBreakHeartAfterRotation();
+            return;
+        }
+        this.RotateTo(this.originalEulerAngles, this.SpawnBreakHeartAfterRotation);
+    };
+
+    private SpawnBreakHeartAfterRotation = (): void => {
+        if (this.itemDraggable?.spawnBreakHeartOnDropFail) {
+            this.itemDraggable.item?.SpawnBreakHeart();
+        }
     };
 
     private CacheOriginalRotation(): void {
@@ -101,13 +136,14 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
         this.hasOriginalRotation = true;
     }
 
-    private RotateTo(targetEulerAngles: Vec3): void {
+    private RotateTo(targetEulerAngles: Vec3, onComplete?: () => void): void {
         const target = this.GetRotateTarget();
         this.StopRotationTween();
 
         if (this.useLocalRotation) {
             this.rotateTween = tween(target)
                 .to(this.rotateDuration, { eulerAngles: targetEulerAngles }, { easing: this.GetEasing() })
+                .call(() => onComplete?.())
                 .start();
             return;
         }
@@ -122,6 +158,7 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
                     target.setWorldRotationFromEuler(euler.x, euler.y, euler.z);
                 },
             })
+            .call(() => onComplete?.())
             .start();
     }
 

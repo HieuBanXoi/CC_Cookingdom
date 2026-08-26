@@ -1,6 +1,7 @@
 import { _decorator, Node, Vec3, tween, Tween } from 'cc';
 import { ItemClickable } from './ItemClickable';
 import { Sink } from './Sink';
+import { HandTutManager } from '../../Managers/HandTutManager';
 
 const { ccclass, property } = _decorator;
 
@@ -79,6 +80,7 @@ export class SinkButton extends ItemClickable {
         }
         this.updateVisuals(true);
         this.PlayPopSound();
+        HandTutManager.Ins?.WaterToggleDone(this);
     }
 
     public TurnOffWater() {

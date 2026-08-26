@@ -86,6 +86,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private spawnHeartOnReturnComplete: boolean = true;
     private enableDraggableOnReturnComplete: boolean = false;
     private consumeCurrentDropFail: boolean = false;
+    private suppressCurrentDropFailEffect: boolean = false;
     private pendingDragDelta: Vec2 = new Vec2();
 
     private cachedReturnPosition: Vec3 = new Vec3();
@@ -165,10 +166,14 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     public BeginDrag(): boolean {
         if (!GameManager.Ins?.IsPlaying() || !this.CanDrag()) return false;
 
+        // A new interaction clears any success/failure feedback still attached
+        // to this item (HeartFX or BreakHeartFX).
+        this.item?.TurnOffActiveEffect();
         Tween.stopAllByTarget(this.node);
         this.pendingDragDelta.set(0, 0);
         this.isReturningToStart = false;
         this.isForceReturningToStart = false;
+        this.suppressCurrentDropFailEffect = false;
         this.SetShadowActive(false);
         this.PlayBeginDragSound();
 
@@ -210,7 +215,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             if (!this.consumeCurrentDropFail) {
                 // Show the failure feedback at the rejected drop position,
                 // before this item starts travelling back to its origin.
-                if (this.spawnBreakHeartOnDropFail && this.item) {
+                if (this.spawnBreakHeartOnDropFail && !this.suppressCurrentDropFailEffect && this.item) {
                     this.item.SpawnBreakHeart();
                 }
 
@@ -222,6 +227,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             } else {
                 this.SetShadowActive(true);
             }
+            this.suppressCurrentDropFailEffect = false;
             return;
         }
 
@@ -363,6 +369,21 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         }
         this.item.itemMoveToTarget.defaultTarget = target;
         this.targetItemType = targetItem.itemType;
+    }
+
+    /** Disables the break-heart effect for subsequent failed drops. */
+    public DisableSpawnBreakHeartOnDropFail(): void {
+        this.spawnBreakHeartOnDropFail = false;
+    }
+
+    /** Enables the break-heart effect for subsequent failed drops. */
+    public EnableSpawnBreakHeartOnDropFail(): void {
+        this.spawnBreakHeartOnDropFail = true;
+    }
+
+    /** Lets a companion component spawn this failed-drop effect after its own animation finishes. */
+    public SuppressCurrentDropFailEffect(): void {
+        this.suppressCurrentDropFailEffect = true;
     }
 
     private ResetScale() {

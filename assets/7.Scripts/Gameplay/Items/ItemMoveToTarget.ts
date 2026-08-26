@@ -101,7 +101,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         Tween.stopAllByTarget(this.node);
 
         if (this.resetParentBeforeMove && this.originalParent && this.originalParent.isValid) {
-            this.node.setParent(this.originalParent);
+            this.SetParentPreservingWorldTransform(this.originalParent);
         }
 
         if (this.lockInputWhileMoving && GameManager.Ins) {
@@ -172,14 +172,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         const target = targetNode || this.defaultTarget;
 
         if (this.setParentToTarget && target && target.isValid) {
-            const currentWorldPos = this.node.worldPosition.clone();
-            const currentWorldScale = this.node.worldScale.clone();
-            const currentWorldRotation = this.node.worldRotation.clone();
-
-            this.node.setParent(target);
-            this.node.setWorldPosition(currentWorldPos);
-            this.node.setWorldScale(currentWorldScale);
-            this.node.setWorldRotation(currentWorldRotation);
+            this.SetParentPreservingWorldTransform(target);
         }
 
         if (this.lockInputWhileMoving && GameManager.Ins) {
@@ -207,5 +200,19 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
 
     public SetEndScale(scale: number) {
         this.endScaleMultiplier = scale;
+    }
+
+    /** Reparent without changing the item's visible position, rotation, or scale. */
+    private SetParentPreservingWorldTransform(parent: Node): void {
+        if (this.node.parent === parent) return;
+
+        const worldPosition = this.node.worldPosition.clone();
+        const worldScale = this.node.worldScale.clone();
+        const worldRotation = this.node.worldRotation.clone();
+
+        this.node.setParent(parent);
+        this.node.setWorldPosition(worldPosition);
+        this.node.setWorldScale(worldScale);
+        this.node.setWorldRotation(worldRotation);
     }
 }

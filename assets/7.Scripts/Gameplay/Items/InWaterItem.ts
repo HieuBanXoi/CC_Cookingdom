@@ -10,6 +10,9 @@ import { ComponentCache } from '../../Core/Base/CacheComponent';
 import { HandTutManager } from '../../Managers/HandTutManager';
 import { PhaseManager } from '../../Managers/PhaseManager';
 import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
+import { World } from '../../Managers/World';
+import { PoolType } from '../../Core/Pool/PoolMember';
+import { WaterSplash } from '../Effects/WaterSplash';
 
 const { ccclass, property } = _decorator;
 
@@ -117,6 +120,11 @@ export class InWaterItem extends Item {
     private moveDestination: InWaterMoveDestination = InWaterMoveDestination.Water;
     private waterDragOriginalScale: Vec3 = new Vec3(1, 1, 1);
     private wasInWaterOnDrag: boolean = false;
+    private readonly handleBeginDragInWater = (): void => this.OnBeginDragInWater();
+    private readonly handleDropSuccessInWater = (target?: Node): void => {
+        this.OnDropSuccessInWater();
+        this.OnDropSuccessMovement(target || null);
+    };
 
     // Bob effect internal variables
     private startBobLocalPos: Vec3 = new Vec3(0, 0, 0);
@@ -244,8 +252,7 @@ export class InWaterItem extends Item {
     }
 
     public override ShouldPlayBobEffectAfterReturn(): boolean {
-        if (!this.isInWater) return true;
-        return this.sink !== null && this.sink.isWaterIn;
+        return this.isInWater && this.sink !== null && this.sink.isWaterIn;
     }
 
     public override OnDragFailReturnComplete(): void {
@@ -281,8 +288,8 @@ export class InWaterItem extends Item {
 
         this.itemType = ItemType.None;
         this.isCutDone = true;
-        HandTutManager.Ins?.ItemDone(this);
-        PhaseManager.Ins?.DoOneStep();
+        // HandTutManager.Ins?.ItemDone(this.node);
+        // PhaseManager.Ins?.DoOneStep();
 
         if (this.itemClickable) {
             this.itemClickable.enabled = false;
@@ -344,6 +351,7 @@ export class InWaterItem extends Item {
 
         if (this.sink) {
             this.sink.RegisterInWaterItem(this);
+            HandTutManager.Ins?.RegisterItemInWater(this);
             this.SetPlateFoodShadowActive(true);
             this.SpawnWaterSplashOnEnter(wasInWater);
             if (this.sink.isWaterIn) {
@@ -355,14 +363,29 @@ export class InWaterItem extends Item {
     }
 
     protected SpawnWaterSplashOnEnter(wasInWater: boolean): void {
-        if (wasInWater || !this.sink || !this.sink.isWaterIn || !this.sink.waterSplashPos) return;
-        Ply_SoundManager.Ins?.PlayFx(FxType.Drop);
+        if (wasInWater || !this.sink || !this.sink.isWaterIn) return;
+
+        Ply_SoundManager.Ins?.PlayFx(FxType.FoodToWater);
+
+        const splashParent = this.sink.waterSplashPos;
+        if (!splashParent?.isValid || !this.waterTarget?.isValid) return;
+
+        const splash = World.instance?.poolManager?.spawnType<WaterSplash>(
+            PoolType.WaterSplash,
+            this.waterTarget.worldPosition,
+        );
+        if (!splash) return;
+
+        splash.node.setParent(splashParent);
+        splash.node.setWorldPosition(this.waterTarget.worldPosition);
+        splash.Play(1);
     }
 
     public OnMoveToCuttingBoardComplete(): void {
         this.StopBobEffect(false);
         this.ply_TimerEvent?.StopTimer();
         this.sink?.UnregisterInWaterItem(this);
+        HandTutManager.Ins?.UnregisterItemInWater(this);
 
         Tween.stopAllByTarget(this.node);
         if (this.cuttingBoardTarget && this.cuttingBoardTarget.isValid) {
@@ -395,6 +418,7 @@ export class InWaterItem extends Item {
         this.StopBobEffect(false);
         this.ply_TimerEvent?.StopTimer();
         this.sink?.UnregisterInWaterItem(this);
+        HandTutManager.Ins?.UnregisterItemInWater(this);
 
         const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
         cuttingBoard?.IsFoodOn(false);
@@ -450,13 +474,11 @@ export class InWaterItem extends Item {
 
     private SubscribeMovementEvents(): void {
         if (this.itemDraggable) {
-            this.itemDraggable.onBeginDrag.removeListener(this.OnBeginDragInWater.bind(this));
-            this.itemDraggable.onDropSuccess.removeListener(this.OnDropSuccessInWater.bind(this));
-            this.itemDraggable.onDropSuccess.removeListener(this.MoveToCurrentTarget.bind(this));
+            this.itemDraggable.onBeginDrag.removeListener(this.handleBeginDragInWater);
+            this.itemDraggable.onDropSuccess.removeListener(this.handleDropSuccessInWater);
 
-            this.itemDraggable.onBeginDrag.addListener(this.OnBeginDragInWater.bind(this));
-            this.itemDraggable.onDropSuccess.addListener(this.OnDropSuccessInWater.bind(this));
-            this.itemDraggable.onDropSuccess.addListener(this.MoveToCurrentTarget.bind(this));
+            this.itemDraggable.onBeginDrag.addListener(this.handleBeginDragInWater);
+            this.itemDraggable.onDropSuccess.addListener(this.handleDropSuccessInWater);
         }
 
         if (this.itemMoveToTarget) {
@@ -467,8 +489,8 @@ export class InWaterItem extends Item {
 
     private UnsubscribeMovementEvents(): void {
         if (this.itemDraggable) {
-            this.itemDraggable.onBeginDrag.removeAllListeners();
-            this.itemDraggable.onDropSuccess.removeAllListeners();
+            this.itemDraggable.onBeginDrag.removeListener(this.handleBeginDragInWater);
+            this.itemDraggable.onDropSuccess.removeListener(this.handleDropSuccessInWater);
         }
 
         if (this.itemMoveToTarget) {
@@ -502,6 +524,12 @@ export class InWaterItem extends Item {
         this.wasInWaterOnDrag = this.isInWater;
         if (!this.wasInWaterOnDrag) return;
 
+        // The item must stay still while the player is dragging it. Its bob
+        // effect is restarted only after a failed drop returns it to water.
+        // ItemDraggable has already reparented this node, so resetting the
+        // cached local bob position would cause a visible drag offset.
+        this.StopBobEffect(false);
+
         Vec3.copy(this.waterDragOriginalScale, this.node.scale);
 
         if (this.scaleOnDragFromWater) {
@@ -515,6 +543,11 @@ export class InWaterItem extends Item {
 
     private OnDropSuccessInWater(): void {
         this.ResetWaterDragState(false);
+    }
+
+    /** Called after a successful drop. Subclasses may replace the normal movement. */
+    protected OnDropSuccessMovement(_target: Node | null): void {
+        this.MoveToCurrentTarget();
     }
 
     private ResetWaterDragState(restoreScale: boolean): void {

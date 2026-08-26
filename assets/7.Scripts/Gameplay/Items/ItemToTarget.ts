@@ -92,7 +92,7 @@ export class ItemToTarget extends Item {
         this.itemDraggable.targetItemType = ItemType.None;
         if (this.itemDoneWhenArrive) {
             this.ItemDone();
-            HandTutManager.Ins?.ItemDone(this);
+            HandTutManager.Ins?.ItemDone(this.node);
         }
     }
 

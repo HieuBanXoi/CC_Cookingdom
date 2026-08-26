@@ -126,7 +126,7 @@ export class SinkBlock extends Item {
             }
         }
 
-        HandTutManager.Ins?.RegisterCorrectAction();
+        HandTutManager.Ins?.SinkBlockMoveDone(this);
         this.updateDragAvailability();
     };
 
