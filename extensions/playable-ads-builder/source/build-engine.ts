@@ -31,6 +31,7 @@ try {
     // sharp là native module: có thể build lệch ABI với Electron của Cocos Creator Editor.
     // Nếu load lỗi, tự động fallback dùng file ảnh gốc (không nén) thay vì làm sập cả build.
     sharpLib = require('sharp');
+    console.log('[playable-ads-builder] Đã load "sharp" thành công, sẽ nén ảnh khi build.');
 } catch (err) {
     console.warn('[playable-ads-builder] Không load được "sharp", ảnh sẽ giữ nguyên (không nén webp).', err);
 }
@@ -48,13 +49,19 @@ try {
 
 async function compressImage(filePath: string, compression: ICompressionOptions): Promise<Buffer> {
     const raw = await fs.readFile(filePath);
-    if (!sharpLib || compression.type === CompressionType.None) {
+    if (!sharpLib) {
+        console.warn(`[playable-ads-builder] Bỏ qua nén ảnh (sharp chưa load được): ${filePath}`);
+        return raw;
+    }
+    if (compression.type === CompressionType.None) {
         return raw;
     }
     try {
         const options = compression.type === CompressionType.Lossless ? { lossless: true } : { quality: compression.quality };
         const compressed: Buffer = await sharpLib(filePath).webp(options).toBuffer();
-        return compressed.length < raw.length ? compressed : raw;
+        const smaller = compressed.length < raw.length;
+        console.log(`[playable-ads-builder] Nén ảnh ${path.basename(filePath)}: ${raw.length} -> ${compressed.length} byte${smaller ? '' : ' (không nhỏ hơn, giữ ảnh gốc)'}`);
+        return smaller ? compressed : raw;
     } catch (err) {
         console.warn(`[playable-ads-builder] Nén ảnh thất bại, dùng ảnh gốc: ${filePath}`, err);
         return raw;

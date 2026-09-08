@@ -1,0 +1,24 @@
+{
+  "package_version": 2,
+  "name": "cookingdom-toolkit",
+  "version": "1.0.0",
+  "description": "Read-only readiness checks and authoring guidance for Cookingdom levels.",
+  "main": "./main.js",
+  "editor": ">=3.8.0",
+  "author": "Cookingdom",
+  "panels": {
+    "default": {
+      "title": "Cookingdom Toolkit",
+      "type": "dockable",
+      "main": "panels/default",
+      "size": { "min-width": 620, "min-height": 460, "width": 760, "height": 560 }
+    }
+  },
+  "contributions": {
+    "menu": [{ "path": "Tools", "label": "Cookingdom Toolkit", "message": "open-panel" }],
+    "messages": {
+      "open-panel": { "methods": ["openPanel"] },
+      "scan-base": { "methods": ["scanBase"] }
+    }
+  }
+}

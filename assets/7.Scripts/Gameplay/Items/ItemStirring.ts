@@ -3,11 +3,23 @@ import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { Ply_EventHandlerComponent } from '../../Core/Base/Ply_EventHandlerComponent';
 import { GameManager } from '../../Managers/GameManager';
+import { ItemType } from './ItemType';
+import type { Item } from './Item';
+import {
+    CookingInteractionType,
+    IGameplayInteraction,
+    InteractionRejectReason,
+    InteractionRequest,
+    InteractionResult,
+    InteractionResults,
+} from '../Interaction/InteractionContract';
 
 const { ccclass, property } = _decorator;
 
 @ccclass('ItemStirring')
-export class ItemStirring extends Ply_EventHandlerComponent {
+export class ItemStirring extends Ply_EventHandlerComponent implements IGameplayInteraction {
+
+    public readonly interactionType = CookingInteractionType.Stir;
 
     @property
     public stirRadius: number = 200;
@@ -73,7 +85,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
     }
 
     public BeginStir(event?: EventTouch) {
-        if (!GameManager.Ins?.IsPlaying() || this.isDone || !this.enabled) return;
+        if (!this.canStart(this.createInteractionRequest()).accepted) return;
         this.isStirring = true;
         this.ShowStirringSprite();
 
@@ -159,7 +171,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
      * Animation Event at the end of the controller's stirring clip.
      */
     public CompleteStir() {
-        if (this.isDone) return;
+        if (!this.tryComplete(this.createInteractionRequest()).completed) return;
         this.isDone = true;
         this.isStirring = false;
         this.ShowIdleSprite();
@@ -170,6 +182,49 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         }
         Ply_SoundManager.Ins.StopFxLoop(FxType.Stirring);
         this.onStirComplete.invoke();
+    }
+
+    /** Adapter API used by recipe flow, validators, and runtime debugging. */
+    public canStart(request: InteractionRequest): InteractionResult {
+        if (request.type !== this.interactionType) {
+            return InteractionResults.rejected(InteractionRejectReason.PrerequisiteMissing);
+        }
+        if (request.actor && request.actor !== this.node) {
+            return InteractionResults.rejected(InteractionRejectReason.WrongItem);
+        }
+        if (!GameManager.Ins?.IsPlaying()) {
+            return InteractionResults.rejected(InteractionRejectReason.GameNotPlayable);
+        }
+        if (!this.enabled) return InteractionResults.rejected(InteractionRejectReason.Disabled);
+        if (this.isDone) return InteractionResults.rejected(InteractionRejectReason.AlreadyComplete);
+        return InteractionResults.started();
+    }
+
+    /** Completion is driven by clip progress or an Animation Event, not touch distance alone. */
+    public tryComplete(request: InteractionRequest): InteractionResult {
+        if (request.type !== this.interactionType) {
+            return InteractionResults.rejected(InteractionRejectReason.PrerequisiteMissing);
+        }
+        if (request.actor && request.actor !== this.node) {
+            return InteractionResults.rejected(InteractionRejectReason.WrongItem);
+        }
+        if (!this.enabled) return InteractionResults.rejected(InteractionRejectReason.Disabled);
+        if (this.isDone) return InteractionResults.rejected(InteractionRejectReason.AlreadyComplete);
+        return InteractionResults.completed(this.node);
+    }
+
+    public resetInteraction(): void {
+        this.ResetStir();
+    }
+
+    private createInteractionRequest(): InteractionRequest {
+        const item = this.getComponent('Item') as Item | null;
+        return {
+            type: this.interactionType,
+            actor: this.node,
+            actorItemType: item?.itemType ?? ItemType.None,
+            target: this.node,
+        };
     }
 
     private resumeStirAnimation(): void {

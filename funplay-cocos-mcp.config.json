@@ -1,0 +1,27 @@
+{
+  "host": "127.0.0.1",
+  "port": 24032,
+  "portMode": "project",
+  "clientConfigEntries": {
+    "codex": {
+      "serverName": "cocos-cookingdom-13a44a",
+      "url": "http://127.0.0.1:24032/",
+      "configPath": "C:\\Users\\Admin\\.codex\\config.toml",
+      "projectIdentity": "13a44a50aefbc778b73982a6"
+    }
+  },
+  "toolProfile": "core",
+  "enabledTools": [],
+  "disabledTools": [],
+  "enabledToolCategories": [],
+  "disabledToolCategories": [],
+  "enableSessions": false,
+  "enableConsoleLogging": true,
+  "executeJavascriptSafetyChecks": true,
+  "autostart": true,
+  "maxInteractionLogEntries": 50,
+  "lastClientTargetId": "codex",
+  "activeToolProfileName": "",
+  "savedToolProfiles": [],
+  "language": "auto"
+}

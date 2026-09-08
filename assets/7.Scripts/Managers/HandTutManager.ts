@@ -407,9 +407,14 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         }
 
         const dragRaycastTarget = item.getComponent(ItemDragRaycastTarget);
+        const profileTarget = item.interactionProfile?.TutorialTarget;
         const raycastDefaultTarget = item.itemMoveToTarget?.defaultTarget;
 
-        if (dragRaycastTarget && this.isDraggableReady(item) && raycastDefaultTarget?.isValid) {
+        if (item.interactionProfile?.IsExplicitDragMode && this.isDraggableReady(item) && profileTarget?.isValid) {
+            this.playMoveHint(item.node, profileTarget);
+            this.currentItemHandTut = item;
+            this.TypeHind = TypeHind.Drag;
+        } else if (dragRaycastTarget && this.isDraggableReady(item) && raycastDefaultTarget?.isValid) {
             // This interaction changes its accepted ItemType dynamically while
             // dragging, so the hint must always use its configured default target.
             this.playMoveHint(item.node, raycastDefaultTarget);
@@ -498,15 +503,18 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         // Draggable items with no target type are normally not tutorial
         // candidates. ItemDragRaycastTarget is the exception: it chooses the
         // accepted type during the drag, but still needs a default-target hint.
+        const hasExplicitDragTarget = !!item.interactionProfile?.IsExplicitDragMode
+            && !!item.interactionProfile.TutorialTarget?.isValid;
         if (item.itemDraggable?.enabled
             && item.itemDraggable.targetItemType === ItemType.None
-            && !hasDragRaycastTarget) {
+            && !hasDragRaycastTarget
+            && !hasExplicitDragTarget) {
             return false;
         }
 
         return this.isClickableReady(item)
             || (hasDragRaycastTarget && this.isDraggableReady(item) && !!item.itemMoveToTarget?.defaultTarget?.isValid)
-            || (this.isDraggableReady(item) && this.hasValidDragTarget(item))
+            || (this.isDraggableReady(item) && (hasExplicitDragTarget || this.hasValidDragTarget(item)))
             || this.isStirringReady(item);
     }
 
@@ -520,6 +528,9 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     /** Validates the configured drag target, including optional type matching. */
     private hasValidDragTarget(item: Item): boolean {
+        if (item.interactionProfile?.IsExplicitDragMode) {
+            return !!item.interactionProfile.TutorialTarget?.isValid;
+        }
         const target = item.itemMoveToTarget?.defaultTarget;
         const draggable = item.itemDraggable;
         if (!target || !target.isValid || !draggable) return false;

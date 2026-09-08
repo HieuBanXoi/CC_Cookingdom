@@ -16,6 +16,7 @@ import { ItemStirring } from './ItemStirring';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { ItemSound } from './ItemSound';
 import { PhaseManager } from '../../Managers/PhaseManager';
+import { ItemInteractionProfile } from '../Interaction/ItemInteractionProfile';
 
 const { ccclass, property } = _decorator;
 
@@ -67,6 +68,9 @@ export class Item extends Ply_GameUnit {
 
     @property({ type: ItemSound, tooltip: 'Cached ItemSound reference' })
     public itemSound: ItemSound | null = null;
+
+    @property({ type: ItemInteractionProfile, tooltip: 'Optional explicit interaction and tutorial target configuration.' })
+    public interactionProfile: ItemInteractionProfile | null = null;
 
     @property({ type: Animation, tooltip: 'Cached Animation reference' })
     public animationComponent: Animation | null = null;
@@ -129,6 +133,11 @@ export class Item extends Ply_GameUnit {
 
         if (refreshHiddenReferences || !this.itemSound) {
             this.itemSound = this.getComponent(ItemSound) || ComponentCache.get(this.node, ItemSound);
+        }
+
+        if (refreshHiddenReferences || !this.interactionProfile) {
+            this.interactionProfile = this.getComponent(ItemInteractionProfile)
+                || ComponentCache.get(this.node, ItemInteractionProfile);
         }
     }
 

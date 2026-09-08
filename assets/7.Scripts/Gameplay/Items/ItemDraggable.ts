@@ -6,11 +6,21 @@ import { ItemType } from './ItemType';
 import type { Item } from './Item';
 import { Ply_EventHandlerComponent } from '../../Core/Base/Ply_EventHandlerComponent';
 import { GameManager } from '../../Managers/GameManager';
+import {
+    CookingInteractionType,
+    IGameplayInteraction,
+    InteractionRejectReason,
+    InteractionRequest,
+    InteractionResult,
+    InteractionResults,
+} from '../Interaction/InteractionContract';
 
 const { ccclass, property } = _decorator;
 
 @ccclass('ItemDraggable')
-export class ItemDraggable extends Ply_EventHandlerComponent {
+export class ItemDraggable extends Ply_EventHandlerComponent implements IGameplayInteraction {
+
+    public readonly interactionType = CookingInteractionType.DragDrop;
 
     @property
     public isDraggable: boolean = true;
@@ -32,6 +42,12 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
     @property({ type: Enum(ItemType) })
     public targetItemType: ItemType = ItemType.None;
+
+    @property({ type: Node, tooltip: 'Optional exact drop node. When assigned, this takes priority over Target Item Type.' })
+    public explicitDropTarget: Node | null = null;
+
+    @property({ tooltip: 'When true, use Explicit Drop Target only. A null target represents intentional free drag.' })
+    public useExplicitDropTarget: boolean = false;
 
     @property(Node)
     public shadowObject: Node = null!;
@@ -164,7 +180,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     }
 
     public BeginDrag(): boolean {
-        if (!GameManager.Ins?.IsPlaying() || !this.CanDrag()) return false;
+        if (!this.canStart(this.createInteractionRequest()).accepted) return false;
 
         // A new interaction clears any success/failure feedback still attached
         // to this item (HeartFX or BreakHeartFX).
@@ -205,11 +221,14 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     public EndDrag() {
         if (!this.CanDrag() || !this.isDraggingSession) return;
         this.pendingDragDelta.set(0, 0);
-        this.isDraggingSession = false;
         this.consumeCurrentDropFail = false;
 
-        const dropTarget = this.FindMatchingDropTarget();
-        if (!dropTarget) {
+        const result = this.tryComplete(this.createInteractionRequest());
+        const dropTarget = result.target;
+        // Preserve the former event-visible state: the interaction is no
+        // longer dragging before success/failure callbacks are invoked.
+        this.isDraggingSession = false;
+        if (!result.completed || !dropTarget) {
             this.ResetScale();
             this.onDropFail.invoke();
             if (!this.consumeCurrentDropFail) {
@@ -275,6 +294,10 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
     /** Finds an active Item under the dropped item's center whose type matches targetItemType. */
     private FindMatchingDropTarget(): Node | null {
+        if (this.useExplicitDropTarget) {
+            const target = this.explicitDropTarget;
+            return target && this.isPointInsideDropTarget(target) ? target : null;
+        }
         if (this.targetItemType === ItemType.None) return null;
 
         const scene = this.node.scene;
@@ -288,25 +311,37 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             if (!otherItem || otherItem.node === this.node || !otherItem.node.activeInHierarchy) continue;
             if (otherItem.itemType !== this.targetItemType) continue;
 
-            const targetTransform = otherItem.getComponent(UITransform);
-            if (!targetTransform) continue;
-
-            // Convert the dragged item's pivot (its center) into the target's
-            // local UI space, then require it to be inside the target's exact
-            // UITransform width/height. No distance-based fallback is allowed.
-            const localPoint = targetTransform.convertToNodeSpaceAR(myWorldPos);
-            const left = -targetTransform.anchorX * targetTransform.width;
-            const right = left + targetTransform.width;
-            const bottom = -targetTransform.anchorY * targetTransform.height;
-            const top = bottom + targetTransform.height;
-
-            if (localPoint.x >= left && localPoint.x <= right
-                && localPoint.y >= bottom && localPoint.y <= top) {
+            if (this.isPointInsideDropTarget(otherItem.node, myWorldPos)) {
                 return otherItem.node;
             }
         }
 
         return null;
+    }
+
+    /** Assigns the preferred Node target without changing the legacy type fallback. */
+    public SetExplicitDropTarget(target: Node | null): void {
+        this.explicitDropTarget = target;
+        this.useExplicitDropTarget = true;
+    }
+
+    /** Restores the legacy Target Item Type rule. */
+    public UseLegacyDropTarget(): void {
+        this.useExplicitDropTarget = false;
+    }
+
+    private isPointInsideDropTarget(target: Node, worldPoint: Vec3 = this.node.worldPosition): boolean {
+        if (!target?.isValid || !target.activeInHierarchy) return false;
+        const targetTransform = target.getComponent(UITransform);
+        if (!targetTransform) return false;
+
+        const localPoint = targetTransform.convertToNodeSpaceAR(worldPoint);
+        const left = -targetTransform.anchorX * targetTransform.width;
+        const right = left + targetTransform.width;
+        const bottom = -targetTransform.anchorY * targetTransform.height;
+        const top = bottom + targetTransform.height;
+        return localPoint.x >= left && localPoint.x <= right
+            && localPoint.y >= bottom && localPoint.y <= top;
     }
 
     public TeleportToStart() {
@@ -358,6 +393,64 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.isForceReturningToStart = false;
         }
         return true;
+    }
+
+    /** Adapter API used by recipe flow, validators, and runtime debugging. */
+    public canStart(request: InteractionRequest): InteractionResult {
+        if (request.type !== this.interactionType) {
+            return InteractionResults.rejected(InteractionRejectReason.PrerequisiteMissing);
+        }
+        if (request.actor && request.actor !== this.node) {
+            return InteractionResults.rejected(InteractionRejectReason.WrongItem);
+        }
+        if (!GameManager.Ins?.IsPlaying()) {
+            return InteractionResults.rejected(InteractionRejectReason.GameNotPlayable);
+        }
+        if (!this.CanDrag()) {
+            return InteractionResults.rejected(InteractionRejectReason.Disabled);
+        }
+        return InteractionResults.started();
+    }
+
+    /**
+     * Evaluates the same hit-test used by EndDrag without firing events or
+     * moving the item. This lets tools inspect a pending drop safely.
+     */
+    public tryComplete(request: InteractionRequest): InteractionResult {
+        if (request.type !== this.interactionType) {
+            return InteractionResults.rejected(InteractionRejectReason.PrerequisiteMissing);
+        }
+        if (request.actor && request.actor !== this.node) {
+            return InteractionResults.rejected(InteractionRejectReason.WrongItem);
+        }
+        if (!this.isDraggingSession || !this.CanDrag()) {
+            return InteractionResults.rejected(InteractionRejectReason.Disabled);
+        }
+
+        const target = this.FindMatchingDropTarget();
+        if (!target) return InteractionResults.rejected(InteractionRejectReason.WrongTarget);
+        if (request.target && request.target !== target) {
+            return InteractionResults.rejected(InteractionRejectReason.WrongTarget);
+        }
+        return InteractionResults.completed(target);
+    }
+
+    /** Clears only transient drag state; it does not reposition the item. */
+    public resetInteraction(): void {
+        this.pendingDragDelta.set(0, 0);
+        this.isDraggingSession = false;
+        this.consumeCurrentDropFail = false;
+        this.suppressCurrentDropFailEffect = false;
+    }
+
+    private createInteractionRequest(target: Node | null = null): InteractionRequest {
+        const item = this.item ?? (this.getComponent('Item') as Item | null);
+        return {
+            type: this.interactionType,
+            actor: this.node,
+            actorItemType: item?.itemType ?? ItemType.None,
+            target,
+        };
     }
 
     /** Sets the accepted drop type from the Item component on the supplied node. */
