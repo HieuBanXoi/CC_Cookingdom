@@ -52,9 +52,13 @@ export class UI extends Component {
 
     onLoad() {
         ui = this;
-        this.isGoogleBuild = typeof window !== 'undefined'
-            && ((window as any).__IS_GOOGLE_BUILD__ === true
-                || typeof (window as any).clickTag !== 'undefined');
+        try{
+            if(PlayableSDK.channel == "Google") {
+                this.isGoogleBuild = true;
+            }
+        } catch(error){
+
+        }
 
         if (this.isGoogleBuild) {
             this.downloadBtns.forEach(node => node.active = false);
