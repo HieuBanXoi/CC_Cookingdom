@@ -24,6 +24,19 @@ export class InputManager extends Ply_Singleton<InputManager> {
     private currentDraggable: ItemDraggable | null = null;
     private currentStirring: ItemStirring | null = null;
 
+    /** All gameplay touch input is disabled while the game is not playing. */
+    private IsGameplayInputEnabled(): boolean {
+        return GameManager.Ins?.IsPlaying() === true;
+    }
+
+    private CancelInteractionForInputLock(): void {
+        this.currentDraggable?.CancelDragForInputLock();
+        this.currentStirring?.EndStir();
+        this.currentDraggable = null;
+        this.currentStirring = null;
+        this.isDragging = false;
+    }
+
     protected onLoad() {
         super.onLoad();
         InputManager.instance = this;
@@ -31,7 +44,7 @@ export class InputManager extends Ply_Singleton<InputManager> {
     }
 
     public BeginDragItem(draggable: ItemDraggable): void {
-        if (!GameManager.Ins?.IsPlaying() || this.isDragging) return;
+        if (!this.IsGameplayInputEnabled() || this.isDragging) return;
 
         this.currentDraggable = draggable;
         if (draggable.BeginDrag()) {
@@ -44,7 +57,7 @@ export class InputManager extends Ply_Singleton<InputManager> {
     }
 
     public BeginStirItem(stirring: ItemStirring, event?: EventTouch): void {
-        if (!GameManager.Ins?.IsPlaying() || this.isDragging) return;
+        if (!this.IsGameplayInputEnabled() || this.isDragging) return;
 
         this.currentStirring = stirring;
         stirring.BeginStir(event);
@@ -95,16 +108,22 @@ export class InputManager extends Ply_Singleton<InputManager> {
 
     isFirtMove: boolean = true;
     onTouchStart(event: EventTouch) {
+        if (!this.IsGameplayInputEnabled()) return;
+
+        // The first-state UI and BGM should begin on any screen touch; it does
+        // not depend on dragging or successfully interacting with an item.
+        this.RegisterFirstMove();
+
         const draggable = this.getTouchedComponent(event, ItemDraggable);
-        if (draggable && draggable.enabled && GameManager.Ins?.IsPlaying()) {
+        if (draggable && draggable.enabled) {
             this.BeginDragItem(draggable);
         } else {
             const stirring = this.getTouchedComponent(event, ItemStirring);
-            if (stirring && stirring.enabled && GameManager.Ins?.IsPlaying()) {
+            if (stirring && stirring.enabled) {
                 this.BeginStirItem(stirring, event);
             } else {
                 const clickable = this.getTouchedComponent(event, ItemClickable);
-                if (clickable && GameManager.Ins?.IsPlaying() && clickable.canClick && clickable.enabled) {
+                if (clickable && clickable.canClick && clickable.enabled) {
                     this.RegisterFirstMove();
                     clickable.PerformClick();
                 }
@@ -114,12 +133,22 @@ export class InputManager extends Ply_Singleton<InputManager> {
     }
 
     onTouchMove(event: EventTouch) {
+        if (!this.IsGameplayInputEnabled()) {
+            this.CancelInteractionForInputLock();
+            return;
+        }
+
         this.currentDraggable?.HandleTouchMove(event);
         this.currentStirring?.Stir(event);
         this.bindingMove(event);
     }
 
     onTouchEnd(event: EventTouch) {
+        if (!this.IsGameplayInputEnabled()) {
+            this.CancelInteractionForInputLock();
+            return;
+        }
+
         this.currentDraggable?.CompleteTouchDrag();
         this.EndInteraction();
         this.bindingEnd(event);
@@ -151,7 +180,12 @@ export class InputManager extends Ply_Singleton<InputManager> {
     }
 
     update(deltaTime: number) {
-       this.bindingUpdate(); 
+        if (!this.IsGameplayInputEnabled()) {
+            if (this.isDragging) this.CancelInteractionForInputLock();
+            return;
+        }
+
+        this.bindingUpdate();
     }
 
     private getTouchedComponent<T>(event: EventTouch, componentType: new (...args: any[]) => T): T | null {
@@ -185,5 +219,3 @@ export class InputManager extends Ply_Singleton<InputManager> {
         return null;
     }
 }
-
-

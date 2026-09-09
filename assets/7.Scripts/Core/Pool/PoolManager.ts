@@ -72,7 +72,7 @@ export class PoolManager extends Component{
   
   link: Map<PoolType, Pool> = new Map<PoolType, Pool>();
 
-  preLoad(poolAmounts: PoolAmount[]) {
+  preLoad(poolAmounts: Array<{ root: Node; prefab: Prefab; amount: number }>) {
     for (let i = 0; i < poolAmounts.length; i++) {
       let poolAmount = poolAmounts[i];
       let pool = new Pool(
@@ -121,4 +121,3 @@ export class PoolManager extends Component{
   }
     
 }
-

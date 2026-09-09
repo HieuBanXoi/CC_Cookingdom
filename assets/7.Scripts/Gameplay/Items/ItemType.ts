@@ -19,6 +19,7 @@ export enum ItemType {
     Crust, PanStep1,
     PanStep2,
     PanStep3,
+    FoodOil,
 
 }
 Enum(ItemType);

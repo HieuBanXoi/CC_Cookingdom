@@ -8,8 +8,6 @@
 //  - https://docs.cocos.com/creator/2.4/manual/en/scripting/life-cycle-callbacks.html
 
 import { CCInteger, Component, Node, Prefab, _decorator } from "cc"; 
-import { PoolMember, PoolType } from "./PoolMember";
-import { PoolAmount, PoolManager } from "./PoolManager";
 
 const { ccclass, property } = _decorator;
 
@@ -25,15 +23,17 @@ export default class PoolControl extends Component {
   @property({ type: CCInteger, tooltip: 'Number of instances to create for each prefab at startup.' })
   prewarmAmount: number = 0;
 
-  poolAmounts: PoolAmount[] = [];
+  // Keep this structural so PoolControl does not import PoolManager.  The
+  // previous runtime import created a circular module dependency at startup.
+  poolAmounts: Array<{ root: Node; prefab: Prefab; amount: number }> = [];
 
   preLoad() {
     this.prefabs.forEach((prefab, index) => {
-      let poolAmount = new PoolAmount();
-      poolAmount.root = this.root;
-      poolAmount.prefab = prefab;
-      poolAmount.amount = this.prewarmAmount;
-      this.poolAmounts.push(poolAmount);
+      this.poolAmounts.push({
+        root: this.root,
+        prefab,
+        amount: this.prewarmAmount,
+      });
     })
   }
 

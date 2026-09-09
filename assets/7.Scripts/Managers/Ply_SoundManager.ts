@@ -36,7 +36,8 @@ export enum FxType {
     Lose,
     Cat,
     WaterDrop,
-    WaterOut
+    WaterOut,
+    ClockTick
 }
 Enum(FxType);
 

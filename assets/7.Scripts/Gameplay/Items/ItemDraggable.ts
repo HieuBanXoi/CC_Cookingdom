@@ -241,6 +241,22 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.onDropSuccess.invoke(dropTarget);
     }
 
+    /**
+     * Stops an in-progress drag without evaluating a drop target.  This is
+     * used when gameplay input is locked (for example while a popup is open),
+     * so the item cannot accidentally complete a drop or show failure FX.
+     */
+    public CancelDragForInputLock(): void {
+        if (!this.isDraggingSession) return;
+
+        this.pendingDragDelta.set(0, 0);
+        this.isDraggingSession = false;
+        this.consumeCurrentDropFail = false;
+        this.suppressCurrentDropFailEffect = false;
+        this.ResetScale();
+        this.ReturnToStart(false);
+    }
+
     public ReturnToStart(spawnHeart: boolean = true, enableDraggableOnComplete: boolean = false) {
         this.spawnHeartOnReturnComplete = spawnHeart;
         this.enableDraggableOnReturnComplete = enableDraggableOnComplete;
@@ -384,6 +400,11 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     /** Lets a companion component spawn this failed-drop effect after its own animation finishes. */
     public SuppressCurrentDropFailEffect(): void {
         this.suppressCurrentDropFailEffect = true;
+    }
+
+    /** Lets a custom tool consume a failed drop after handling its own target. */
+    public ConsumeCurrentDropFail(): void {
+        this.consumeCurrentDropFail = true;
     }
 
     private ResetScale() {
