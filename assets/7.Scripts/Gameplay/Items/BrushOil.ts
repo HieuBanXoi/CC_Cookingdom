@@ -2,6 +2,7 @@ import { _decorator, Node, Sprite, Tween, tween, UITransform, Vec3 } from 'cc';
 import { ItemDraggable } from './ItemDraggable';
 import { Item } from './Item';
 import { ItemType } from './ItemType';
+import { StoveCooking, StoveFoodSlot } from './StoveCooking';
 import { FxType, Ply_SoundManager } from '../../Managers/Ply_SoundManager';
 
 const { ccclass, property } = _decorator;
@@ -41,18 +42,21 @@ export class BrushOil extends Item {
 
     private readonly passCounts = new Map<BrushOilTarget, number>();
     private readonly brushedThisDrag = new Set<BrushOilTarget>();
+    private readonly blockedCookingSlotsThisDrag = new Set<StoveFoodSlot>();
     private readonly defaultFoodScales = new Map<Node, Vec3>();
     private didBrushInCurrentDrag = false;
+    private stove: StoveCooking | null = null;
 
     protected onLoad(): void {
         super.onLoad();
+        this.stove = this.node.scene?.getComponentInChildren(StoveCooking) ?? null;
         this.ResetOil();
         // This brush is a free-sweeping tool, not a regular drop-to-target item.
         // Keeping the drop type empty guarantees release returns it for the next pass.
         if (this.itemDraggable) {
             this.itemDraggable.targetItemType = ItemType.None;
-            // A free-sweeping brush never has a valid drop target, so its
-            // automatic return must never be treated as a failed food drop.
+            // BrushOil is a forgiving free-sweeping tool: releasing it away
+            // from food simply returns it, without failure feedback.
             this.itemDraggable.DisableSpawnBreakHeartOnDropFail();
         }
         // The brush must remain usable while the foods wait to be oiled.
@@ -83,6 +87,13 @@ export class BrushOil extends Item {
             if (this.brushedThisDrag.has(target) || this.passCounts.get(target) >= 2) continue;
             this.ApplyBrushPass(target);
         }
+
+        const brushPoint = (this.brushPoint ?? this.node).worldPosition;
+        const stoveSlot = this.stove?.GetFoodOnStoveSlotAtPoint(brushPoint);
+        if (stoveSlot && !this.blockedCookingSlotsThisDrag.has(stoveSlot)) {
+            this.blockedCookingSlotsThisDrag.add(stoveSlot);
+            this.stove?.ShowFoodOnStoveBlockedFeedback(brushPoint);
+        }
     }
 
     /** Enable this from the preceding gameplay step when the brush becomes usable. */
@@ -107,6 +118,7 @@ export class BrushOil extends Item {
     public ResetOil(): void {
         this.passCounts.clear();
         this.brushedThisDrag.clear();
+        this.blockedCookingSlotsThisDrag.clear();
         this.didBrushInCurrentDrag = false;
 
         for (const target of this.targets) {
@@ -117,15 +129,18 @@ export class BrushOil extends Item {
 
     private readonly onBrushDragStart = (): void => {
         this.brushedThisDrag.clear();
+        this.blockedCookingSlotsThisDrag.clear();
         this.didBrushInCurrentDrag = false;
         Ply_SoundManager.Ins?.PlayFx(FxType.Cream);
     };
 
     private readonly onBrushDragEnd = (): void => {
         // A completed brush contact is valid gameplay, even though the brush
-        // returns to its start because it has no drop target.
+        // returns to its start because it has no drop target. Marking the
+        // release also stops companions such as ItemDragChildRotator from
+        // emitting a BreakHeart once their own animation finishes.
         if (this.didBrushInCurrentDrag) {
-            this.itemDraggable?.SuppressCurrentDropFailEffect();
+            this.itemDraggable?.MarkCurrentDropFailHandled();
         }
         this.brushedThisDrag.clear();
     };

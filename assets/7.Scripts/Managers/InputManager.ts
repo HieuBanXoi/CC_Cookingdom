@@ -2,8 +2,10 @@ import { _decorator, EventTouch, Input, input, Node, UITransform, Vec2, Vec3 } f
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { GameManager } from './GameManager';
 import { ItemDraggable } from '../Gameplay/Items/ItemDraggable';
+import { Item } from '../Gameplay/Items/Item';
 import { ItemStirring } from '../Gameplay/Items/ItemStirring';
 import { ItemClickable } from '../Gameplay/Items/ItemClickable';
+import { StoveCooking } from '../Gameplay/Items/StoveCooking';
 import { ui } from './UI';
 import { Ply_SoundManager } from './Ply_SoundManager';
 const { ccclass, property } = _decorator;
@@ -115,8 +117,14 @@ export class InputManager extends Ply_Singleton<InputManager> {
         this.RegisterFirstMove();
 
         const draggable = this.getTouchedComponent(event, ItemDraggable);
-        if (draggable && draggable.enabled) {
-            this.BeginDragItem(draggable);
+        if (draggable) {
+            if (draggable.enabled) {
+                this.BeginDragItem(draggable);
+            } else {
+                // Visible gameplay items that are intentionally locked still
+                // give the player clear feedback when touched.
+                (draggable.item ?? draggable.node.getComponent(Item))?.SpawnBreakHeart();
+            }
         } else {
             const stirring = this.getTouchedComponent(event, ItemStirring);
             if (stirring && stirring.enabled) {
@@ -126,6 +134,10 @@ export class InputManager extends Ply_Singleton<InputManager> {
                 if (clickable && clickable.canClick && clickable.enabled) {
                     this.RegisterFirstMove();
                     clickable.PerformClick();
+                } else {
+                    const point = event.getUILocation();
+                    this.node.scene?.getComponentInChildren(StoveCooking)
+                        ?.ShowCookingFoodBlockedFeedback(new Vec3(point.x, point.y, 0));
                 }
             }
         }

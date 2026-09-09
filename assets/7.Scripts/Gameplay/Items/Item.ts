@@ -270,6 +270,24 @@ export class Item extends Ply_GameUnit {
         }
     }
 
+    /** Spawns a break heart at another visible node while this item is hidden. */
+    public SpawnBreakHeartAt(target: Node | null): void {
+        if (!target?.isValid) {
+            this.SpawnBreakHeart();
+            return;
+        }
+
+        this.TurnOffActiveEffect();
+        const breakHeartEffect = World.instance?.poolManager?.spawnType<BreakHeartEffect>(PoolType.BreakHeartFX, target.worldPosition);
+        if (breakHeartEffect) {
+            if (breakHeartEffect.node.parent !== target) breakHeartEffect.node.setParent(target);
+            breakHeartEffect.node.setPosition(0, 0, 0);
+            breakHeartEffect.node.setWorldRotationFromEuler(0, 0, 0);
+            this.CacheActiveEffect(breakHeartEffect);
+            breakHeartEffect.PlaySpawnWithScale(this.breakHeartEffectScale);
+        }
+    }
+
     /** Spawns the blink effect from the BlinkFX pool at this item's position. */
     public SpawnBlinkEffect() {
         this.TurnOffActiveEffect();

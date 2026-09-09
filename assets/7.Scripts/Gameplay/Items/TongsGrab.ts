@@ -15,6 +15,7 @@ export class TongsGrab extends Item {
     private stove: StoveCooking | null = null;
     private heldSlot: StoveFoodSlot | null = null;
     private placedDuringCurrentDrag = false;
+    private readonly blockedCookingSlotsThisDrag = new Set<StoveFoodSlot>();
 
     protected onLoad(): void {
         this.draggable = this.getComponent(ItemDraggable);
@@ -57,9 +58,17 @@ export class TongsGrab extends Item {
         }
 
         const slot = this.stove.TryGrabAtPoint(point);
-        if (!slot) return;
-        const food = this.stove.GrabWithTongs(slot, this.foodPos);
-        if (food) this.heldSlot = slot;
+        if (slot) {
+            const food = this.stove.GrabWithTongs(slot, this.foodPos);
+            if (food) this.heldSlot = slot;
+            return;
+        }
+
+        const cookingSlot = this.stove.GetCookingSlotAtPoint(point);
+        if (cookingSlot && !this.blockedCookingSlotsThisDrag.has(cookingSlot)) {
+            this.blockedCookingSlotsThisDrag.add(cookingSlot);
+            this.stove.ShowCookingFoodBlockedFeedback(point);
+        }
     }
 
     /** Current next Tong interaction point, used by HandTutManager. */
@@ -96,11 +105,15 @@ export class TongsGrab extends Item {
             this.draggable?.ReturnToStart(false);
             return;
         }
+        // The Tong is allowed to be released empty without feedback, but
+        // dropping a held cooked piece away from its own plate is a mistake.
+        this.SpawnBreakHeart();
         this.stove.ReturnFromTongs(slot);
     };
 
     private readonly OnBeginDrag = (): void => {
         this.placedDuringCurrentDrag = false;
+        this.blockedCookingSlotsThisDrag.clear();
     };
 
     private readonly OnDropSuccess = (): void => {

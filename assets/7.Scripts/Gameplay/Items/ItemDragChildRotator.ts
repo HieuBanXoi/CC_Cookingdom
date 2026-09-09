@@ -124,9 +124,9 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
     };
 
     private SpawnBreakHeartAfterRotation = (): void => {
-        if (this.itemDraggable?.spawnBreakHeartOnDropFail) {
-            this.itemDraggable.item?.SpawnBreakHeart();
-        }
+        // ItemDraggable owns this decision: another onDropFail listener may have
+        // marked the release as valid after the rotation was scheduled.
+        this.itemDraggable?.SpawnDeferredDropFailEffect();
     };
 
     private CacheOriginalRotation(): void {

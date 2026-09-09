@@ -47,6 +47,7 @@ export class StoveCooking extends Component {
     @property({ min: 0.01, tooltip: 'Food transfer duration for Tong and Plate.' }) public foodTransferDuration = 0.25;
 
     private stoveStepComplete = false;
+    private readonly blockedStoveFoodsThisDrag = new Set<Item>();
 
     protected onLoad(): void {
         this.clockPos ??= this.FindByNames(this.node, ['ClockPos']);
@@ -68,11 +69,41 @@ export class StoveCooking extends Component {
         Ply_SoundManager.Ins?.StopFxLoop(FxType.Frying);
     }
 
+    protected update(): void {
+        // FoodOil is accepted as soon as its UI rectangle overlaps a Grill;
+        // the player does not need to release their finger over the stove.
+        for (const food of this.blockedStoveFoodsThisDrag) {
+            if (!food.itemDraggable?.IsDragging) this.blockedStoveFoodsThisDrag.delete(food);
+        }
+
+        const checkedFoods = new Set<Item>();
+        for (const slot of this.slots) {
+            const food = slot.food;
+            if (!food || checkedFoods.has(food)) continue;
+            checkedFoods.add(food);
+            if (!food.itemDraggable?.IsDragging) continue;
+
+            const grill = this.slots.find(candidate => candidate.food === food && candidate.grill &&
+                this.IsUITransformOverlapping(food.node, candidate.grill));
+            if (!grill) continue;
+            if (!this.CanAcceptFood(food)) {
+                // The stove is occupied. Show feedback on the food currently
+                // being dragged, rather than on the food already cooking.
+                if (!this.blockedStoveFoodsThisDrag.has(food)) {
+                    this.blockedStoveFoodsThisDrag.add(food);
+                    food.SpawnBreakHeart();
+                }
+                continue;
+            }
+            this.TryPlaceFoodOnStove(food);
+        }
+    }
+
     private readonly OnFoodDropFail = (): void => {
         const candidate = this.slots.find(slot => {
             const food = slot.food;
             return !!food && food.itemType === ItemType.FoodOil
-                && !!slot.grill && this.IsPointInside(food.node.worldPosition, slot.grill);
+                && !!slot.grill && this.IsUITransformOverlapping(food.node, slot.grill);
         });
         if (!candidate?.food) return;
 
@@ -83,8 +114,16 @@ export class StoveCooking extends Component {
             food.itemDraggable?.SuppressCurrentDropFailEffect();
             return;
         }
+        this.TryPlaceFoodOnStove(food);
+    };
+
+    /** Starts all stove pieces owned by a dropped FoodOil exactly once. */
+    private TryPlaceFoodOnStove(food: Item): boolean {
+        if (!this.CanAcceptFood(food)) return false;
         const matchingSlots = this.slots.filter(slot => slot.food === food && !slot.cooking && !slot.ready);
-        food.itemDraggable?.ConsumeCurrentDropFail();
+        if (!matchingSlots.length) return false;
+
+        food.itemDraggable?.MarkCurrentDropFailHandled();
         food.itemDraggable?.DisableComponent();
         food.node.active = false;
         // Keep a single frying loop running while any food is on the stove.
@@ -92,7 +131,8 @@ export class StoveCooking extends Component {
         // One drag can place a multi-piece food onto all of its configured
         // independent stove positions. Each slot owns its own timer and Done.
         for (const slot of matchingSlots) this.PlaceOnGrill(slot);
-    };
+        return true;
+    }
 
     private PlaceOnGrill(slot: StoveFoodSlot): void {
         const food = slot.food;
@@ -133,6 +173,44 @@ export class StoveCooking extends Component {
             if (slot.ready && !slot.heldByTongs && slot.done && this.IsPointInside(worldPoint, slot.done)) return slot;
         }
         return null;
+    }
+
+    /** Returns a cooking (not yet ready) stove piece under the supplied point. */
+    public GetCookingSlotAtPoint(worldPoint: Vec3): StoveFoodSlot | null {
+        for (const slot of this.slots) {
+            if (!slot.cooking || slot.ready || slot.heldByTongs) continue;
+            const hitNodes = [...slot.foodVisuals, slot.grill, slot.stoveGroup]
+                .filter((node): node is Node => !!node?.activeInHierarchy);
+            if (hitNodes.some(node => this.IsPointInside(worldPoint, node))) return slot;
+        }
+        return null;
+    }
+
+    /** Returns any stove food that is still on the stove, cooked or cooking. */
+    public GetFoodOnStoveSlotAtPoint(worldPoint: Vec3): StoveFoodSlot | null {
+        for (const slot of this.slots) {
+            if ((!slot.cooking && !slot.ready) || slot.heldByTongs) continue;
+            const hitNodes = [...slot.foodVisuals, slot.grill, slot.done, slot.stoveGroup]
+                .filter((node): node is Node => !!node?.activeInHierarchy);
+            if (hitNodes.some(node => this.IsPointInside(worldPoint, node))) return slot;
+        }
+        return null;
+    }
+
+    /** Shows failed-input feedback at the active FoodOnStove position. */
+    public ShowCookingFoodBlockedFeedback(worldPoint: Vec3): boolean {
+        const slot = this.GetCookingSlotAtPoint(worldPoint);
+        if (!slot?.food) return false;
+        slot.food.SpawnBreakHeartAt(slot.stoveGroup ?? slot.grill ?? slot.food.node);
+        return true;
+    }
+
+    /** Shows blocked-input feedback for a food that has not yet left the stove. */
+    public ShowFoodOnStoveBlockedFeedback(worldPoint: Vec3): boolean {
+        const slot = this.GetFoodOnStoveSlotAtPoint(worldPoint);
+        if (!slot?.food) return false;
+        slot.food.SpawnBreakHeartAt(slot.stoveGroup ?? slot.done ?? slot.grill ?? slot.food.node);
+        return true;
     }
 
     /** True only when this FoodOil owns free stove slots and no other food is on the stove. */
@@ -368,6 +446,14 @@ export class StoveCooking extends Component {
         const bottom = -transform.anchorY * transform.height;
         return local.x >= left && local.x <= left + transform.width
             && local.y >= bottom && local.y <= bottom + transform.height;
+    }
+
+    /** True when the visible UI rectangles of the dragged food and Grill touch. */
+    private IsUITransformOverlapping(first: Node, second: Node): boolean {
+        const firstTransform = first.getComponent(UITransform) ?? first.getComponentInChildren(UITransform);
+        const secondTransform = second.getComponent(UITransform) ?? second.getComponentInChildren(UITransform);
+        if (!firstTransform || !secondTransform) return false;
+        return firstTransform.getBoundingBoxToWorld().intersects(secondTransform.getBoundingBoxToWorld());
     }
 
     private FindByNames(root: Node | null, names: string[]): Node | null {

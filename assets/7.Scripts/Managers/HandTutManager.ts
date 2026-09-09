@@ -1,4 +1,4 @@
-import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, Vec3 } from 'cc';
+import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, UITransform, Vec3 } from 'cc';
 import { Item } from '../Gameplay/Items/Item';
 import { ItemType } from '../Gameplay/Items/ItemType';
 import { ItemStirring } from '../Gameplay/Items/ItemStirring';
@@ -81,6 +81,9 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     @property({ min: 0.01 }) public moveDuration = 1.2;
     @property({ min: 0.01, tooltip: 'Fade duration after the drag hand reaches its target.' }) public dragFadeDuration = 0.25;
+    @property({ min: 10, tooltip: 'Half-width of the back-and-forth BrushOil tutorial stroke.' }) public brushHintSwipeDistance = 100;
+    @property({ min: 1, tooltip: 'BrushOil tutorial speed multiplier relative to normal drag hints.' }) public brushHintDurationMultiplier = 1.65;
+    @property({ min: 1, tooltip: 'TongsGrab tutorial speed multiplier relative to normal drag hints.' }) public tongsHintDurationMultiplier = 1.5;
     @property({ min: 0.01 }) public clickScaleDuration = 0.35;
     @property({ min: 0 }) public waitAtEndDuration = 0.2;
     @property public clickScaleMultiplier = 1.25;
@@ -423,12 +426,16 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         const tongRoute = item instanceof TongsGrab ? item.GetHandTutRoute() : [];
         const multiDragRoute = spoonRoute.length >= 2 ? spoonRoute : tongRoute;
 
-        if (multiDragRoute.length >= 2 && this.isDraggableReady(item)) {
-            this.playMovePathHint([item.node, ...multiDragRoute]);
+        if (item instanceof BrushOil && freeDragTarget && this.isDraggableReady(item)) {
+            this.playBrushOilHint(item, freeDragTarget);
+            this.currentItemHandTut = item;
+            this.TypeHind = TypeHind.Drag;
+        } else if (multiDragRoute.length >= 2 && this.isDraggableReady(item)) {
+            this.playMovePathHint([item.node, ...multiDragRoute], item instanceof TongsGrab ? this.tongsHintDurationMultiplier : 1);
             this.currentItemHandTut = item;
             this.TypeHind = TypeHind.Drag;
         } else if (freeDragTarget && this.isDraggableReady(item)) {
-            this.playMoveHint(item.node, freeDragTarget);
+            this.playMoveHint(item.node, freeDragTarget, item instanceof TongsGrab ? this.tongsHintDurationMultiplier : 1);
             this.currentItemHandTut = item;
             this.TypeHind = TypeHind.Drag;
         } else if (dragRaycastTarget && this.isDraggableReady(item) && raycastDefaultTarget?.isValid) {
@@ -587,7 +594,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         loop();
     }
 
-    private playMoveHint(start: Node | Vec3, end: Node | Vec3): void {
+    private playMoveHint(start: Node | Vec3, end: Node | Vec3, durationMultiplier = 1): void {
         const startPosition = start instanceof Node ? start.worldPosition.clone() : start.clone();
         const endPosition = end instanceof Node ? end.worldPosition.clone() : end.clone();
         const token = this.prepareHand(startPosition);
@@ -596,7 +603,35 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
             this.handNode.setWorldPosition(startPosition);
             this.setHandAlpha(this.handDefaultAlpha);
             tween(this.handNode)
-                .to(this.moveDuration, { worldPosition: endPosition }, { easing: 'sineInOut' })
+                .to(this.moveDuration * durationMultiplier, { worldPosition: endPosition }, { easing: 'sineInOut' })
+                .call(() => this.fadeHandAfterDrag())
+                .delay(this.dragFadeDuration + this.waitAtEndDuration)
+                .call(loop)
+                .start();
+        };
+        loop();
+    }
+
+    /** Shows one continuous brush pickup followed by two strokes across food. */
+    private playBrushOilHint(brush: BrushOil, food: Node): void {
+        const start = brush.node.worldPosition.clone();
+        const center = food.worldPosition.clone();
+        const transform = food.getComponent(UITransform) ?? food.getComponentInChildren(UITransform);
+        const halfStroke = Math.max(this.brushHintSwipeDistance, (transform?.width ?? 0) * 0.3);
+        const left = new Vec3(center.x - halfStroke, center.y, center.z);
+        const right = new Vec3(center.x + halfStroke, center.y, center.z);
+        const totalDuration = this.moveDuration * this.brushHintDurationMultiplier;
+        const token = this.prepareHand(start);
+
+        const loop = (): void => {
+            if (!this.isHintCurrent(token)) return;
+            this.handNode.setWorldPosition(start);
+            this.setHandAlpha(this.handDefaultAlpha);
+            tween(this.handNode)
+                .to(totalDuration * 0.35, { worldPosition: left }, { easing: 'sineInOut' })
+                // Left → right is the first pass; right → left is the second.
+                .to(totalDuration * 0.325, { worldPosition: right }, { easing: 'sineInOut' })
+                .to(totalDuration * 0.325, { worldPosition: left }, { easing: 'sineInOut' })
                 .call(() => this.fadeHandAfterDrag())
                 .delay(this.dragFadeDuration + this.waitAtEndDuration)
                 .call(loop)
@@ -606,7 +641,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     /** Plays a multi-step drag route, used for Spoon → seasoning → FoodOil. */
-    private playMovePathHint(nodes: Node[]): void {
+    private playMovePathHint(nodes: Node[], durationMultiplier = 1): void {
         const positions = nodes.filter(node => !!node?.isValid).map(node => node.worldPosition.clone());
         if (positions.length < 2) return;
         const token = this.prepareHand(positions[0]);
@@ -615,7 +650,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
             this.handNode.setWorldPosition(positions[0]);
             this.setHandAlpha(this.handDefaultAlpha);
             let sequence = tween(this.handNode);
-            const duration = this.moveDuration / (positions.length - 1);
+            const duration = (this.moveDuration * durationMultiplier) / (positions.length - 1);
             for (let index = 1; index < positions.length; index++) {
                 sequence = sequence.to(duration, { worldPosition: positions[index] }, { easing: 'sineInOut' });
             }

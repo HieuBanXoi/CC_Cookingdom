@@ -85,6 +85,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private isForceReturningToStart: boolean = false;
     private spawnHeartOnReturnComplete: boolean = true;
     private enableDraggableOnReturnComplete: boolean = false;
+    private currentDropFailIsValidAction: boolean = false;
     private consumeCurrentDropFail: boolean = false;
     private suppressCurrentDropFailEffect: boolean = false;
     private pendingDragDelta: Vec2 = new Vec2();
@@ -174,6 +175,8 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.isReturningToStart = false;
         this.isForceReturningToStart = false;
         this.suppressCurrentDropFailEffect = false;
+        this.currentDropFailIsValidAction = false;
+        this.consumeCurrentDropFail = false;
         this.SetShadowActive(false);
         this.PlayBeginDragSound();
 
@@ -206,27 +209,34 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         if (!this.CanDrag() || !this.isDraggingSession) return;
         this.pendingDragDelta.set(0, 0);
         this.isDraggingSession = false;
-        this.consumeCurrentDropFail = false;
 
         const dropTarget = this.FindMatchingDropTarget();
         if (!dropTarget) {
             this.ResetScale();
+            this.suppressCurrentDropFailEffect = false;
+            this.currentDropFailIsValidAction = false;
+            this.consumeCurrentDropFail = false;
             this.onDropFail.invoke();
-            if (!this.consumeCurrentDropFail) {
-                // Show the failure feedback at the rejected drop position,
-                // before this item starts travelling back to its origin.
-                if (this.spawnBreakHeartOnDropFail && !this.suppressCurrentDropFailEffect && this.item) {
-                    this.item.SpawnBreakHeart();
-                }
 
-                if (this.returnToStartOnDragFailed) {
-                    this.ReturnToStart(false);
-                } else {
-                    this.FinalizeFailedDrag(false);
-                }
-            } else {
-                this.SetShadowActive(true);
+            // Show the failure feedback at the rejected drop position, before
+            // this item starts travelling back to its origin.
+            if (this.spawnBreakHeartOnDropFail && !this.suppressCurrentDropFailEffect
+                && !this.currentDropFailIsValidAction && this.item) {
+                this.item.SpawnBreakHeart();
             }
+
+            if (this.consumeCurrentDropFail) {
+                // A listener took the item over completely, so it must not be
+                // pulled back to its start position.
+                this.SetShadowActive(true);
+            } else if (this.returnToStartOnDragFailed) {
+                this.ReturnToStart(false);
+            } else {
+                this.FinalizeFailedDrag(false);
+            }
+
+            // currentDropFailIsValidAction stays set until the next drag so a
+            // companion spawning its effect later can still see it.
             this.suppressCurrentDropFailEffect = false;
             return;
         }
@@ -251,6 +261,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
         this.pendingDragDelta.set(0, 0);
         this.isDraggingSession = false;
+        this.currentDropFailIsValidAction = true;
         this.consumeCurrentDropFail = false;
         this.suppressCurrentDropFailEffect = false;
         this.ResetScale();
@@ -402,9 +413,34 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.suppressCurrentDropFailEffect = true;
     }
 
-    /** Lets a custom tool consume a failed drop after handling its own target. */
+    /**
+     * Marks the current release as valid gameplay. Free-sweeping tools such as
+     * the brush and the spoon have no drop target, so every release reaches the
+     * failed-drop path even when the tool did its job.
+     */
+    public MarkCurrentDropFailHandled(): void {
+        this.currentDropFailIsValidAction = true;
+    }
+
+    /**
+     * Marks the release as valid and hands the item over to the listener, which
+     * then owns its position. Use MarkCurrentDropFailHandled() instead when the
+     * item should still travel back to its start.
+     */
     public ConsumeCurrentDropFail(): void {
+        this.currentDropFailIsValidAction = true;
         this.consumeCurrentDropFail = true;
+    }
+
+    /**
+     * Spawns the failed-drop effect a companion deferred with
+     * SuppressCurrentDropFailEffect(). The release can be marked as valid by
+     * another onDropFail listener after that suppression, so the decision is
+     * re-checked here rather than at suppression time.
+     */
+    public SpawnDeferredDropFailEffect(): void {
+        if (this.isDraggingSession || this.currentDropFailIsValidAction || !this.spawnBreakHeartOnDropFail) return;
+        this.item?.SpawnBreakHeart();
     }
 
     private ResetScale() {

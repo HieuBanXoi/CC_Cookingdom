@@ -2,6 +2,7 @@ import { _decorator, Component, Node, Tween, tween, UITransform, UIOpacity, Vec3
 import { Item } from './Item';
 import { ItemDraggable } from './ItemDraggable';
 import { ItemType } from './ItemType';
+import { StoveCooking, StoveFoodSlot } from './StoveCooking';
 import { FxType, Ply_SoundManager } from '../../Managers/Ply_SoundManager';
 
 const { ccclass, property } = _decorator;
@@ -48,25 +49,32 @@ export class SpoonSeasoning extends Item {
     private readonly applied = new Map<Item, Set<SeasoningType>>();
     private readonly restingPositions = new Map<Node, Vec3>();
     private spoonComplete = false;
+    private didSeasonFoodInCurrentDrag = false;
+    private didHitWrongFoodInCurrentDrag = false;
+    private readonly blockedCookingSlotsThisDrag = new Set<StoveFoodSlot>();
+    private stove: StoveCooking | null = null;
 
     protected onLoad(): void {
         this.ownerItem = this.getComponent(Item);
         this.draggable = this.getComponent(ItemDraggable);
+        this.stove = this.node.scene?.getComponentInChildren(StoveCooking) ?? null;
         this.AutoAssignSceneNodes();
         this.HideAllFoodSeasoningSprites();
         this.SetHeld(SeasoningType.None);
         if (this.draggable) {
             this.draggable.targetItemType = ItemType.None;
-            this.draggable.DisableSpawnBreakHeartOnDropFail();
+            this.draggable.EnableSpawnBreakHeartOnDropFail();
         }
     }
 
     protected onEnable(): void {
         this.draggable ??= this.getComponent(ItemDraggable);
+        this.draggable?.onBeginDrag.addListener(this.OnSpoonDragBegin);
         this.draggable?.onDropFail.addListener(this.OnSpoonReleased);
     }
 
     protected onDisable(): void {
+        this.draggable?.onBeginDrag.removeListener(this.OnSpoonDragBegin);
         this.draggable?.onDropFail.removeListener(this.OnSpoonReleased);
         this.SetHeld(SeasoningType.None);
         this.currentFood = null;
@@ -85,11 +93,30 @@ export class SpoonSeasoning extends Item {
             return;
         }
 
+        if (this.held !== SeasoningType.None) {
+            const spoonPoint = (this.spoonPoint ?? this.node).worldPosition;
+            const stoveSlot = this.stove?.GetFoodOnStoveSlotAtPoint(spoonPoint);
+            if (stoveSlot && !this.blockedCookingSlotsThisDrag.has(stoveSlot)) {
+                this.blockedCookingSlotsThisDrag.add(stoveSlot);
+                this.didHitWrongFoodInCurrentDrag = true;
+                this.stove?.ShowFoodOnStoveBlockedFeedback(spoonPoint);
+                this.draggable?.MarkCurrentDropFailHandled();
+                return;
+            }
+        }
+
         const target = this.GetFoodTargetAtPoint();
-        const food = target?.food ?? null;
+        // Also detect the configured food before it becomes FoodOil, so
+        // seasoning it too early gets immediate feedback at that food.
+        const food = target?.food ?? this.GetConfiguredFoodAtPoint();
         if (!food || food === this.currentFood) return;
         this.currentFood = food;
-        if (this.held === SeasoningType.None || !this.Requires(target, this.held) || this.HasSeasoning(food, this.held)) return;
+        if (this.held === SeasoningType.None) return;
+        if (!target || food.itemType !== ItemType.FoodOil
+            || !this.Requires(target, this.held) || this.HasSeasoning(food, this.held)) {
+            this.FailAtWrongFood(food);
+            return;
+        }
 
         this.ApplySeasoning(target, this.held);
         this.SetHeld(SeasoningType.None);
@@ -156,6 +183,17 @@ export class SpoonSeasoning extends Item {
         return null;
     }
 
+    /** Finds any configured food under the spoon, including food not yet oiled. */
+    private GetConfiguredFoodAtPoint(): Item | null {
+        for (const target of this.foodTargets) {
+            const food = target.food;
+            if (food && food !== this.ownerItem && food.node.activeInHierarchy && this.IsPointInside(food.node)) {
+                return food;
+            }
+        }
+        return null;
+    }
+
     private ApplySeasoning(target: SeasoningFoodTarget, seasoning: SeasoningType): void {
         const food = target.food;
         if (!food) return;
@@ -169,6 +207,7 @@ export class SpoonSeasoning extends Item {
         const placedSprite = this.GetPlacedSprite(target, seasoning);
         if (placedSprite) this.PlayFallAnimation(placedSprite);
         Ply_SoundManager.Ins?.PlayFx(FxType.PouringSalt);
+        this.didSeasonFoodInCurrentDrag = true;
 
         if (this.HasAllRequired(target, set)) {
             food.itemDraggable ??= food.getComponent(ItemDraggable);
@@ -254,10 +293,31 @@ export class SpoonSeasoning extends Item {
         }
     }
 
+    private readonly OnSpoonDragBegin = (): void => {
+        this.didSeasonFoodInCurrentDrag = false;
+        this.didHitWrongFoodInCurrentDrag = false;
+        this.blockedCookingSlotsThisDrag.clear();
+    };
+
     private readonly OnSpoonReleased = (): void => {
+        // A seasoning pass is valid despite the spoon having no standard
+        // drop target; otherwise ItemDraggable shows its failure feedback.
+        if (this.didSeasonFoodInCurrentDrag || this.didHitWrongFoodInCurrentDrag) {
+            this.draggable?.MarkCurrentDropFailHandled();
+        }
         this.SetHeld(SeasoningType.None);
         this.currentFood = null;
     };
+
+    /** Gives immediate feedback for seasoning a FoodOil that does not need it. */
+    private FailAtWrongFood(food: Item): void {
+        this.didHitWrongFoodInCurrentDrag = true;
+        food.SpawnBreakHeart();
+        // The failure is already visible on the wrong food. Returning the
+        // free spoon must not emit a second BreakHeart, and the spoon keeps
+        // its seasoning so it can still be moved to the correct food.
+        this.draggable?.MarkCurrentDropFailHandled();
+    }
 
     private PlayFallAnimation(node: Node): void {
         let resting = this.restingPositions.get(node);
