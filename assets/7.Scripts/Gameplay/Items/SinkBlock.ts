@@ -13,8 +13,11 @@ export class SinkBlock extends Item {
     @property({ type: Sink, tooltip: 'Target Sink reference' })
     public sink: Sink = null!;
 
-    @property({ tooltip: 'Initial state: starts inside the sink (drain closed)' })
+    @property({ tooltip: 'Fallback initial state when no Sink is assigned. With a Sink, Sink Start Mode decides.' })
     public startsInside: boolean = false;
+
+    @property({ tooltip: 'Teleport to the inside/outside target on start so the block matches Sink Start Mode.' })
+    public snapToStartLocation: boolean = true;
 
     @property({ type: Enum(ItemType), tooltip: 'Target type when placed inside sink' })
     public insideTargetType: ItemType = ItemType.SinkClosePos;
@@ -59,11 +62,17 @@ export class SinkBlock extends Item {
         if (this.initialized) return;
 
         this.cacheComponents();
-        this.isInside = this.startsInside;
+        if (this.sink) {
+            this.sink.EnsureInitialized();
+            this.isInside = this.sink.StartBlockInside;
+        } else {
+            this.isInside = this.startsInside;
+        }
         this.initialized = true;
 
         this.subscribe();
         this.applyCurrentLocation();
+        if (this.snapToStartLocation) this.itemDraggable?.TeleportToStart();
 
         if (this.sink) {
             if (this.isInside) {

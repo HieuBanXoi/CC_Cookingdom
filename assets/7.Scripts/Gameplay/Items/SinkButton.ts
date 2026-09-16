@@ -14,7 +14,7 @@ export class SinkButton extends ItemClickable {
     @property({ tooltip: 'Toggle water on/off on each click' })
     public toggleWaterOnClick: boolean = true;
 
-    @property({ tooltip: 'Initial water state (true = on, false = off)' })
+    @property({ tooltip: 'Runtime water state. On start it follows Sink Start Mode.' })
     public isWaterOn: boolean = false;
 
     @property({ type: Node, tooltip: 'Optional visual node active when water is ON' })
@@ -38,15 +38,12 @@ export class SinkButton extends ItemClickable {
         this.infiniteClick = true;
         Vec3.copy(this.originalScale, this.node.scale);
 
-        if (!this.sink) {
-            this.sink = this.getComponent(Sink) || this.node.getComponentInParent(Sink)!;
-        }
-
         this.onClick.addListener(this.handleClick);
     }
 
     protected start() {
         if (this.sink) {
+            this.sink.EnsureInitialized();
             this.isWaterOn = this.sink.isWaterDrop;
         }
         this.updateVisuals(false);
@@ -100,9 +97,18 @@ export class SinkButton extends ItemClickable {
             this.offVisualNode.active = !this.isWaterOn;
         }
 
-        if (this.playClickAnim && animate) {
+        const targetRotZ = this.isWaterOn ? this.onRotationZ : this.offRotationZ;
+        if (!animate) {
+            // Initial state: snap the handle to its on/off rotation without tweening.
+            if (this.onRotationZ !== this.offRotationZ) {
+                const curEuler = this.node.eulerAngles;
+                this.node.setRotationFromEuler(curEuler.x, curEuler.y, targetRotZ);
+            }
+            return;
+        }
+
+        if (this.playClickAnim) {
             Tween.stopAllByTarget(this.node);
-            const targetRotZ = this.isWaterOn ? this.onRotationZ : this.offRotationZ;
 
             tween(this.node)
                 .to(0.08, { scale: this.originalScale.clone().multiplyScalar(1.15) }, { easing: 'sineOut' })

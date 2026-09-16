@@ -16,19 +16,38 @@ export enum SinkWaterState {
 }
 Enum(SinkWaterState);
 
+// Start modes. SinkBlock and SinkButton read their initial state from the Sink.
+export enum SinkStartFaucet { Off = 0, On = 1 }
+Enum(SinkStartFaucet);
+
+export enum SinkStartBlock { Outside = 0, Inside = 1 }
+Enum(SinkStartBlock);
+
+export enum SinkStartBasin { Empty = 0, Full = 1 }
+Enum(SinkStartBasin);
+
 @ccclass('Sink')
 export class Sink extends Item {
 
-    @property({ tooltip: 'Is sink drain closed (plugged)' })
+    @property({ type: Enum(SinkStartFaucet), group: { name: 'Start Mode', id: 'start' }, tooltip: 'Faucet on/off at start.' })
+    public startFaucet: SinkStartFaucet = SinkStartFaucet.Off;
+
+    @property({ type: Enum(SinkStartBlock), group: { name: 'Start Mode', id: 'start' }, tooltip: 'SinkBlock inside (drain closed) or outside at start.' })
+    public startBlock: SinkStartBlock = SinkStartBlock.Outside;
+
+    @property({ type: Enum(SinkStartBasin), group: { name: 'Start Mode', id: 'start' }, tooltip: 'Basin already full of water at start (skips the rise animation).' })
+    public startBasin: SinkStartBasin = SinkStartBasin.Empty;
+
+    @property({ tooltip: 'Runtime: is sink drain closed (plugged). Set from Start Mode on start.' })
     public isClose: boolean = false;
 
     @property({ tooltip: 'If true, water only rises when isClose is true. If false, water rises whenever faucet is on' })
     public requireCloseToRise: boolean = false;
 
-    @property({ tooltip: 'Is water faucet turned on' })
+    @property({ tooltip: 'Runtime: is water faucet turned on. Set from Start Mode on start.' })
     public isWaterDrop: boolean = false;
 
-    @property({ tooltip: 'Is basin currently full of water' })
+    @property({ tooltip: 'Runtime: is basin currently full of water. Set from Start Mode on start.' })
     public isWaterIn: boolean = false;
 
     @property(Node)
@@ -101,6 +120,23 @@ export class Sink extends Item {
 
     public get CanWaterRise(): boolean {
         return (!this.requireCloseToRise || this.isClose) && this.waterState !== SinkWaterState.Full;
+    }
+
+    public get StartWaterOn(): boolean {
+        return this.startFaucet === SinkStartFaucet.On;
+    }
+
+    public get StartBlockInside(): boolean {
+        return this.startBlock === SinkStartBlock.Inside;
+    }
+
+    public get StartBasinFull(): boolean {
+        return this.startBasin === SinkStartBasin.Full;
+    }
+
+    /** Applies Start Mode once. Safe to call from other components whose start() may run first. */
+    public EnsureInitialized(): void {
+        this.ensureInitialized();
     }
 
     protected onLoad() {
@@ -270,6 +306,11 @@ export class Sink extends Item {
 
         this.cacheWaterTransform(true);
 
+        // Start Mode is the single source of truth for the initial faucet, drain and basin state.
+        this.isWaterDrop = this.StartWaterOn;
+        this.isClose = this.StartBlockInside;
+        this.isWaterIn = this.StartBasinFull;
+
         this.desiredWaterOn = this.isWaterDrop;
         this.displayedWaterOn = this.desiredWaterOn;
         this.waterState = this.isWaterIn ? SinkWaterState.Full : SinkWaterState.Empty;
@@ -280,6 +321,11 @@ export class Sink extends Item {
 
         if (this.waterState === SinkWaterState.Full) {
             this.startInWaterItems();
+        }
+
+        if (this.desiredWaterOn) {
+            Ply_SoundManager.Ins?.PlayFxLoop(FxType.WaterDrop);
+            if (this.CanWaterRise) this.beginWaterRise();
         }
     }
 

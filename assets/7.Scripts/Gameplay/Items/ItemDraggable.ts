@@ -78,6 +78,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private originalSiblingIndex: number = 0;
     private originalLocalPos: Vec3 = new Vec3();
     private originalScale: Vec3 = new Vec3();
+    private originalWorldScale: Vec3 = new Vec3();
     private originalWorldPos: Vec3 = new Vec3();
 
     private isDraggingSession: boolean = false;
@@ -114,6 +115,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.originalSiblingIndex = this.node.getSiblingIndex();
         Vec3.copy(this.originalLocalPos, this.node.position);
         Vec3.copy(this.originalScale, this.node.scale);
+        Vec3.copy(this.originalWorldScale, this.node.worldScale);
         Vec3.copy(this.originalWorldPos, this.node.worldPosition);
 
         // Ensure node has a valid UITransform for touch events.
@@ -186,18 +188,24 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.originalSiblingIndex = this.node.getSiblingIndex();
             Vec3.copy(this.originalLocalPos, this.node.position);
             Vec3.copy(this.originalWorldPos, this.node.worldPosition);
+            // The resting scale may have changed since onLoad (ItemMoveToTarget
+            // reparenting to a target with another scale, scaleOnMove, ...), so
+            // re-cache it from the current local scale.
+            Vec3.copy(this.originalScale, this.node.scale);
+            Vec3.multiply(this.originalWorldScale, this.originalParent.worldScale, this.originalScale);
         }
 
         // Move to InputManager.Ins.draggingNode to display on top of other elements
         if (InputManager.Ins && InputManager.Ins.draggingNode && InputManager.Ins.draggingNode.isValid && InputManager.Ins.draggingNode.activeInHierarchy) {
             const worldPos = this.node.worldPosition.clone();
-            const worldScale = this.node.worldScale.clone();
             this.node.setParent(InputManager.Ins.draggingNode);
             this.node.setWorldPosition(worldPos);
-            this.node.setWorldScale(worldScale);
         }
 
-        const scaled = this.originalScale.clone().multiplyScalar(this.dragScaleMultiplier);
+        // The item may now live under a parent with a different scale than its
+        // original one, so start from the world scale rather than originalScale.
+        this.node.setWorldScale(this.originalWorldScale);
+        const scaled = this.node.scale.clone().multiplyScalar(this.dragScaleMultiplier);
         tween(this.node).to(this.dragScaleDuration, { scale: scaled }, { easing: 'backOut' }).start();
 
         this.isDraggingSession = true;
@@ -276,18 +284,17 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
         // A canvas resize/orientation change updates the original parent's
         // transform. Returning to the world position cached in onLoad would
-        // therefore use the old canvas coordinate system on Web.
+        // therefore use the old canvas coordinate system on Web, so resolve the
+        // start position from the parent's current transform instead.
+        // The item stays under draggingNode (on top) while travelling; parent
+        // and sibling index are restored only once it arrives.
+        let targetPos: Vec3;
         if (!this.hasCachedReturnPosition && !this.returnTransform && this.originalParent?.isValid) {
-            this.RestoreOriginalParent();
-            tween(this.node)
-                .to(0.3, { position: this.originalLocalPos }, { easing: 'quartOut' })
-                .call(() => this.OnReturnToStartComplete())
-                .start();
-            return;
+            targetPos = Vec3.transformMat4(new Vec3(), this.originalLocalPos, this.originalParent.worldMatrix);
+        } else {
+            targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
+                (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
         }
-
-        const targetPos = this.hasCachedReturnPosition ? this.cachedReturnPosition :
-            (this.returnTransform ? this.returnTransform.worldPosition : this.originalWorldPos);
 
         tween(this.node)
             .to(0.3, { worldPosition: new Vec3(targetPos.x, targetPos.y, this.node.worldPosition.z) }, { easing: 'quartOut' })
@@ -300,15 +307,24 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.ReturnToStart(false, true);
     }
 
-    /** Finds an active Item under the dropped item's center whose type matches targetItemType. */
+    /**
+     * Finds an active Item whose type matches targetItemType and whose
+     * UITransform overlaps this item's UITransform (world-space AABBs).
+     * When several overlap, the one with the largest overlap area wins.
+     */
     private FindMatchingDropTarget(): Node | null {
         if (this.targetItemType === ItemType.None) return null;
 
         const scene = this.node.scene;
         if (!scene) return null;
 
+        const myTransform = this.getComponent(UITransform);
+        if (!myTransform) return null;
+        const myRect = myTransform.getBoundingBoxToWorld();
+
         const items = scene.getComponentsInChildren('Item') as Item[];
-        const myWorldPos = this.node.worldPosition;
+        let best: Node | null = null;
+        let bestArea = 0;
 
         for (let i = 0; i < items.length; i++) {
             const otherItem = items[i];
@@ -318,22 +334,19 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             const targetTransform = otherItem.getComponent(UITransform);
             if (!targetTransform) continue;
 
-            // Convert the dragged item's pivot (its center) into the target's
-            // local UI space, then require it to be inside the target's exact
-            // UITransform width/height. No distance-based fallback is allowed.
-            const localPoint = targetTransform.convertToNodeSpaceAR(myWorldPos);
-            const left = -targetTransform.anchorX * targetTransform.width;
-            const right = left + targetTransform.width;
-            const bottom = -targetTransform.anchorY * targetTransform.height;
-            const top = bottom + targetTransform.height;
+            const targetRect = targetTransform.getBoundingBoxToWorld();
+            if (!myRect.intersects(targetRect)) continue;
 
-            if (localPoint.x >= left && localPoint.x <= right
-                && localPoint.y >= bottom && localPoint.y <= top) {
-                return otherItem.node;
+            const overlapW = Math.min(myRect.xMax, targetRect.xMax) - Math.max(myRect.xMin, targetRect.xMin);
+            const overlapH = Math.min(myRect.yMax, targetRect.yMax) - Math.max(myRect.yMin, targetRect.yMin);
+            const area = overlapW * overlapH;
+            if (area > bestArea) {
+                bestArea = area;
+                best = otherItem.node;
             }
         }
 
-        return null;
+        return best;
     }
 
     public TeleportToStart() {
@@ -445,7 +458,13 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
 
     private ResetScale() {
         Tween.stopAllByTarget(this.node);
-        this.node.setScale(this.originalScale);
+        if (!this.originalParent?.isValid || this.node.parent === this.originalParent) {
+            this.node.setScale(this.originalScale);
+        } else {
+            // Still under draggingNode (or the drop target): restore the original
+            // world scale so RestoreOriginalParent lands back on originalScale.
+            this.node.setWorldScale(this.originalWorldScale);
+        }
     }
 
     private SetShadowActive(isActive: boolean) {
@@ -481,6 +500,10 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
         this.isReturningToStart = false;
         this.RestoreOriginalParent();
         this.RestoreOriginalSiblingIndex();
+        // Snap to the exact cached local position to remove any tween drift.
+        if (!this.hasCachedReturnPosition && !this.returnTransform && this.node.parent === this.originalParent) {
+            this.node.setPosition(this.originalLocalPos);
+        }
         this.SetShadowActive(true);
         this.PlayReturnToStartFinishSound();
         this.onReturnToStartComplete.invoke();

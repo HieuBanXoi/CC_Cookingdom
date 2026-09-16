@@ -27,10 +27,10 @@
             "_value": false
           },
           "3d": {
-            "_value": false
+            "_value": true
           },
           "meshopt": {
-            "_value": false
+            "_value": true
           },
           "2d": {
             "_value": true
@@ -197,6 +197,7 @@
         "name": "Migrated Configuration",
         "includeModules": [
           "2d",
+          "3d",
           "animation",
           "audio",
           "base",
@@ -207,6 +208,7 @@
           "graphics",
           "marionette",
           "mask",
+          "meshopt",
           "particle-2d",
           "procedural-animation",
           "tween",

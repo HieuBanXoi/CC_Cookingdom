@@ -1,6 +1,5 @@
 import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, UITransform, Vec3 } from 'cc';
 import { Item } from '../Gameplay/Items/Item';
-import { ItemType } from '../Gameplay/Items/ItemType';
 import { ItemStirring } from '../Gameplay/Items/ItemStirring';
 import { ItemDragRaycastTarget } from '../Gameplay/Items/ItemDragRaycastTarget';
 import { InWaterItem } from '../Gameplay/Items/InWaterItem';
@@ -8,13 +7,10 @@ import { SinkBlock } from '../Gameplay/Items/SinkBlock';
 import { SinkButton } from '../Gameplay/Items/SinkButton';
 import { PlasticPeeler } from '../Gameplay/Items/PlasticPeeler';
 import { LastBowl } from '../Gameplay/Items/LastBowl';
-import { BrushOil } from '../Gameplay/Items/BrushOil';
-import { SpoonSeasoning } from '../Gameplay/Items/SpoonSeasoning';
-import { TongsGrab } from '../Gameplay/Items/TongsGrab';
-import { StoveCooking } from '../Gameplay/Items/StoveCooking';
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { ComponentCache } from '../Core/Base/CacheComponent';
 import { InputManager } from './InputManager';
+import { ItemType } from '../Gameplay/Items/ItemType';
 
 const { ccclass, property } = _decorator;
 
@@ -34,7 +30,7 @@ Enum(TypeHind);
  */
 @ccclass('HandTutManager')
 export class HandTutManager extends Ply_Singleton<HandTutManager> {
-    @property({ type: [Item], tooltip: 'Items in priority order. BrushOil, SpoonSeasoning and TongsGrab also extend Item and can be dragged here.' })
+    @property({ type: [Item], tooltip: 'Items in priority order.' })
     public items: Item[] = [];
 
     @property({ type: SinkBlock, tooltip: 'Drain block guided before sink-water items can be processed.' })
@@ -71,8 +67,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     public waitForStartSignal = false;
 
     @property({ min: 0 }) public idleDelay = 5;
-    @property({ tooltip: 'BrushOil, SpoonSeasoning and TongsGrab wait for idleDelay before their HandTut appears.' })
-    public freeDragToolsRespectIdleDelay = true;
     @property({ min: 0 }) public firstHandTutDelay = 5;
     @property({ min: 0 }) public shortIdleDelay = 0.5;
     @property({ min: 0 }) public noDelayItemCount = 3;
@@ -81,9 +75,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     @property({ min: 0.01 }) public moveDuration = 1.2;
     @property({ min: 0.01, tooltip: 'Fade duration after the drag hand reaches its target.' }) public dragFadeDuration = 0.25;
-    @property({ min: 10, tooltip: 'Half-width of the back-and-forth BrushOil tutorial stroke.' }) public brushHintSwipeDistance = 100;
-    @property({ min: 1, tooltip: 'BrushOil tutorial speed multiplier relative to normal drag hints.' }) public brushHintDurationMultiplier = 1.65;
-    @property({ min: 1, tooltip: 'TongsGrab tutorial speed multiplier relative to normal drag hints.' }) public tongsHintDurationMultiplier = 1.5;
     @property({ min: 0.01 }) public clickScaleDuration = 0.35;
     @property({ min: 0 }) public waitAtEndDuration = 0.2;
     @property public clickScaleMultiplier = 1.25;
@@ -421,24 +412,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
         const dragRaycastTarget = item.getComponent(ItemDragRaycastTarget);
         const raycastDefaultTarget = item.itemMoveToTarget?.defaultTarget;
-        const freeDragTarget = this.getFreeDragHandTutTarget(item);
-        const spoonRoute = item instanceof SpoonSeasoning ? item.GetHandTutRoute() : [];
-        const tongRoute = item instanceof TongsGrab ? item.GetHandTutRoute() : [];
-        const multiDragRoute = spoonRoute.length >= 2 ? spoonRoute : tongRoute;
-
-        if (item instanceof BrushOil && freeDragTarget && this.isDraggableReady(item)) {
-            this.playBrushOilHint(item, freeDragTarget);
-            this.currentItemHandTut = item;
-            this.TypeHind = TypeHind.Drag;
-        } else if (multiDragRoute.length >= 2 && this.isDraggableReady(item)) {
-            this.playMovePathHint([item.node, ...multiDragRoute], item instanceof TongsGrab ? this.tongsHintDurationMultiplier : 1);
-            this.currentItemHandTut = item;
-            this.TypeHind = TypeHind.Drag;
-        } else if (freeDragTarget && this.isDraggableReady(item)) {
-            this.playMoveHint(item.node, freeDragTarget, item instanceof TongsGrab ? this.tongsHintDurationMultiplier : 1);
-            this.currentItemHandTut = item;
-            this.TypeHind = TypeHind.Drag;
-        } else if (dragRaycastTarget && this.isDraggableReady(item) && raycastDefaultTarget?.isValid) {
+        if (dragRaycastTarget && this.isDraggableReady(item) && raycastDefaultTarget?.isValid) {
             // This interaction changes its accepted ItemType dynamically while
             // dragging, so the hint must always use its configured default target.
             this.playMoveHint(item.node, raycastDefaultTarget);
@@ -522,28 +496,18 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     private canShowTutorialForItem(item: Item): boolean {
         if (!item || item.isDone || !item.node.activeInHierarchy) return false;
 
-        // A seasoned food must wait until the whole stove is free. This keeps
-        // HandTut from pointing at a food the stove currently rejects.
-        if (item.itemType === ItemType.FoodOil) {
-            const stove = item.node.scene?.getComponentInChildren(StoveCooking) ?? null;
-            if (stove && !stove.CanAcceptFood(item)) return false;
-        }
-
         const hasDragRaycastTarget = !!item.getComponent(ItemDragRaycastTarget);
-        const freeDragTarget = this.getFreeDragHandTutTarget(item);
 
         // Draggable items with no target type are normally not tutorial
         // candidates. ItemDragRaycastTarget is the exception: it chooses the
         // accepted type during the drag, but still needs a default-target hint.
         if (item.itemDraggable?.enabled
             && item.itemDraggable.targetItemType === ItemType.None
-            && !hasDragRaycastTarget
-            && !freeDragTarget) {
+            && !hasDragRaycastTarget) {
             return false;
         }
 
         return this.isClickableReady(item)
-            || (this.isDraggableReady(item) && !!freeDragTarget)
             || (hasDragRaycastTarget && this.isDraggableReady(item) && !!item.itemMoveToTarget?.defaultTarget?.isValid)
             || (this.isDraggableReady(item) && this.hasValidDragTarget(item))
             || this.isStirringReady(item);
@@ -570,14 +534,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private isStirringReady(item: Item): boolean {
         return !!item.itemStirring?.enabled && !item.itemStirring.IsDone;
-    }
-
-    /** Supplies HandTut destinations for free-drag tools that use no ItemType drop target. */
-    private getFreeDragHandTutTarget(item: Item): Node | null {
-        if (item instanceof BrushOil) return item.GetHandTutTarget();
-        if (item instanceof SpoonSeasoning) return item.GetHandTutTarget();
-        if (item instanceof TongsGrab) return item.GetHandTutTarget();
-        return null;
     }
 
     private playClickHint(target: Node): void {
@@ -612,15 +568,15 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         loop();
     }
 
-    /** Shows one continuous brush pickup followed by two strokes across food. */
-    private playBrushOilHint(brush: BrushOil, food: Node): void {
-        const start = brush.node.worldPosition.clone();
+    /** Generic free-drag hint retained for future tools. */
+    private playFreeDragHint(tool: Item, food: Node): void {
+        const start = tool.node.worldPosition.clone();
         const center = food.worldPosition.clone();
         const transform = food.getComponent(UITransform) ?? food.getComponentInChildren(UITransform);
-        const halfStroke = Math.max(this.brushHintSwipeDistance, (transform?.width ?? 0) * 0.3);
+        const halfStroke = Math.max(100, (transform?.width ?? 0) * 0.3);
         const left = new Vec3(center.x - halfStroke, center.y, center.z);
         const right = new Vec3(center.x + halfStroke, center.y, center.z);
-        const totalDuration = this.moveDuration * this.brushHintDurationMultiplier;
+        const totalDuration = this.moveDuration * 1.65;
         const token = this.prepareHand(start);
 
         const loop = (): void => {
@@ -756,15 +712,8 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     private getCurrentDelay(): number {
-        if (this.shouldDelayNextHandTut()) return this.hasShownFirstHint ? this.idleDelay : this.firstHandTutDelay;
         if (this.forceNoDelay || this.shownCount < this.noDelayItemCount) return this.shortIdleDelay;
         return this.hasShownFirstHint ? this.idleDelay : this.firstHandTutDelay;
-    }
-
-    private shouldDelayNextHandTut(): boolean {
-        if (!this.freeDragToolsRespectIdleDelay) return false;
-        const item = this.getFirstTutorialReadyItem();
-        return item instanceof BrushOil || item instanceof SpoonSeasoning || item instanceof TongsGrab;
     }
 
     private canShowMore(): boolean {

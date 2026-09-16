@@ -43,6 +43,9 @@ export class Item extends Ply_GameUnit {
     @property(Node)
     public knifePos: Node = null!;
 
+    @property({ type: Node, tooltip: 'Knife node that cuts this item. Set automatically by Knife.SetTarget().' })
+    public knife: Node | null = null;
+
     @property({ min: 0 })
     public heartEffectScale: number = 1.0;
 
@@ -241,7 +244,24 @@ export class Item extends Ply_GameUnit {
     }
 
     public KnifeIn() {
+        console.log(`[Item] KnifeIn called on item "${this.node.name}"`);
         this.onKnifeIn.invoke();
+    }
+
+    /** Stores the knife that targets this item. Called by Knife.SetTarget(). */
+    public SetKnife(knife: Node | null): void {
+        this.knife = knife;
+    }
+
+    /** Lets the stored knife be dropped on this item (sets its targetItemType + defaultTarget). */
+    public EnableKnife(): void {
+        if (!this.knife || !this.knife.isValid) return;
+        this.knife.active = true;
+        this.knife = null;
+        Ply_SoundManager.Ins?.PlayFx(FxType.KnifePlace);
+    }
+    public CutDone() {
+        this.EnableItemDraggable();
     }
 
     /** Spawns the success heart effect from the HeartFX pool. */

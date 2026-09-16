@@ -41,9 +41,6 @@ export class InWaterItem extends Item {
     @property({ type: [Node], tooltip: 'Trash / waste objects attached to this item' })
     public trashObj: Node[] = [];
 
-    @property({ type: Node, tooltip: 'Knife node or Knife item reference' })
-    public knife: Node | null = null;
-
     // --- DRAG FROM WATER ---
     @property({ type: Node, tooltip: 'Water ripple / splash effect node on drag' })
     public waterFx: Node = null!;
@@ -728,12 +725,8 @@ export class InWaterItem extends Item {
         }
     }
 
+    /** Kept for existing scene bindings. The knife reference now lives on Item. */
     public CanKnifeCut(): void {
-        if (this.knife && this.knife.isValid) {
-            const knifeItem = this.knife.getComponent(Item) as any;
-            if (knifeItem && typeof knifeItem.SetTarget === 'function') {
-                knifeItem.SetTarget(this.node);
-            }
-        }
+        this.EnableKnife();
     }
 }

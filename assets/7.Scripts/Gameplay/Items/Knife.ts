@@ -91,6 +91,15 @@ export class Knife extends Item {
         const target = targetNode || this.itemMoveToTarget?.defaultTarget;
         const targetItem = target ? ComponentCache.get(target, Item) : null;
         targetItem?.KnifeIn();
+        this.ReturnToSlotAndHide();
+    }
+
+    /** Snaps the knife back to its slot, restores the idle visual, then hides the node. */
+    public ReturnToSlotAndHide(): void {
+        this.itemDraggable?.TeleportToStart();
+        this.KnifeIdle();
+        this.OnKnifeDone();
+        this.node.active = false;
     }
 
     /** Configures the item that this knife may be dropped onto. */
@@ -103,6 +112,7 @@ export class Knife extends Item {
 
         this.itemDraggable.targetItemType = targetItem.itemType;
         this.itemMoveToTarget.defaultTarget = target;
+        targetItem.SetKnife(this.node);
     }
 
     public override OnDragFailReturnComplete(): void {

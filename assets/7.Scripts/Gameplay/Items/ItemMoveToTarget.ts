@@ -51,7 +51,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
     public endScaleMultiplier: number = 1.0;
 
     @property
-    public setParentToTarget: boolean = false;
+    public setParentToTarget: boolean = true;
 
     @property({ type: [EventHandler], tooltip: 'On move complete event handlers' })
     public onComplete: EventHandler[] = [];
@@ -65,7 +65,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
     @property
     public lockInputWhileMoving: boolean = true;
 
-    @property
+    @property({ tooltip: 'Restore the original parent once the move finishes. While moving the item stays where it is (e.g. under InputManager.draggingNode) so it renders above the drop target.' })
     public resetParentBeforeMove: boolean = true;
 
     private originalParent: Node | null = null;
@@ -99,10 +99,6 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         }
 
         Tween.stopAllByTarget(this.node);
-
-        if (this.resetParentBeforeMove && this.originalParent && this.originalParent.isValid) {
-            this.SetParentPreservingWorldTransform(this.originalParent);
-        }
 
         if (this.lockInputWhileMoving && GameManager.Ins) {
             GameManager.Ins.isPlaying = false;
@@ -171,8 +167,12 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
     private FinishAction(targetNode?: Node | null) {
         const target = targetNode || this.defaultTarget;
 
+        // Reparent only after arriving so the item is not drawn behind the
+        // target (e.g. the cutting board) while it is still travelling.
         if (this.setParentToTarget && target && target.isValid) {
             this.SetParentPreservingWorldTransform(target);
+        } else if (this.resetParentBeforeMove && this.originalParent && this.originalParent.isValid) {
+            this.SetParentPreservingWorldTransform(this.originalParent);
         }
 
         if (this.lockInputWhileMoving && GameManager.Ins) {
@@ -183,8 +183,10 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
             Ply_SoundManager.Ins.PlayFx(this.moveToTargetFinishFxType);
         }
 
-        EventHandler.emitEvents(this.onComplete);
+        // Code listeners (Knife, Spatula, ...) run before Inspector handlers so an
+        // Inspector "Deactivate"/"DisableComponent" cannot unsubscribe them first.
         this.node.emit(ItemMoveToTarget.EVENT_COMPLETE, target);
+        EventHandler.emitEvents(this.onComplete);
     }
 
     public TeleportToTarget(t: Node) {
