@@ -70,7 +70,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     @property({ min: 0 }) public idleDelay = 5;
     @property({ min: 0 }) public firstHandTutDelay = 5;
     @property({ min: 0 }) public shortIdleDelay = 0.5;
-    @property({ min: 0 }) public noDelayItemCount = 3;
+    @property({ min: 0, tooltip: 'The first N distinct steps (items) are hinted after shortIdleDelay; re-showing the same step does not count.' }) public noDelayItemCount = 3;
     @property({ min: 0 }) public breakHeartNoDelayThreshold = 3;
     @property({ min: 0 }) public maxHandTutShowCount = 0;
 
@@ -92,6 +92,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     private isPointerDown = false;
     private isGameplayDragging = false;
     private shownCount = 0;
+    private lastCountedSubject: object | string | null = null;
     private hasShownFirstHint = false;
     private consecutiveDropFails = 0;
     private forceNoDelay = false;
@@ -102,6 +103,8 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     private activeAuxTween: Tween<object> | null = null;
     private activeFadeTween: Tween<UIOpacity> | null = null;
     private boundItems = new Set<Item>();
+    /** When set, only these items may be hinted (e.g. squid + knife before the zoom). */
+    private allowedItems: Set<Item> | null = null;
     private boundPlasticPeelers = new Set<PlasticPeeler>();
     private boundLastBowls = new Set<LastBowl>();
     private isWaitingInitialSinkWaterTutorial = false;
@@ -132,10 +135,14 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         this.removeCompletedItems();
         if (!this.isStarted || this.isPaused || !this.handNode) return;
 
-        // A phase can deactivate an item while its hint is already playing.
-        // Hide it immediately so the hand never points to invisible content.
+        // A phase can deactivate an item while its hint is already playing, or
+        // the item can finish its step through input this manager never sees
+        // (custom gestures on child nodes). Re-validate the shown item every
+        // frame so the hand never points to content that is no longer actionable.
         if (this.currentItemHandTut
-            && (!this.currentItemHandTut.node.activeInHierarchy || this.currentItemHandTut.isDone)) {
+            && (!this.currentItemHandTut.node.activeInHierarchy || this.currentItemHandTut.isDone
+                || !this.isAllowed(this.currentItemHandTut)
+                || !this.canShowTutorialForItem(this.currentItemHandTut))) {
             this.hideHandTut();
             this.resetIdleTimer();
             return;
@@ -216,6 +223,28 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         }
     }
 
+    /**
+     * Restricts hints to the given items until ClearRestriction() is called.
+     * Items outside the set are skipped even when they are otherwise ready.
+     */
+    public RestrictTo(items: (Item | null | undefined)[]): void {
+        this.allowedItems = new Set(items.filter((item): item is Item => !!item && item.isValid));
+        if (this.currentItemHandTut && !this.allowedItems.has(this.currentItemHandTut)) {
+            this.hideHandTut();
+            this.resetIdleTimer();
+        }
+    }
+
+    public ClearRestriction(): void {
+        if (!this.allowedItems) return;
+        this.allowedItems = null;
+        this.resetIdleTimer();
+    }
+
+    private isAllowed(item: Item): boolean {
+        return !this.allowedItems || this.allowedItems.has(item);
+    }
+
     /** Adds an item to the tutorial queue at runtime and requests a fast hint. */
     public RegisterTutorialItem(item: Item): void {
         if (!item || !item.isValid) return;
@@ -287,6 +316,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
         this.playMoveHint(startPos, endPos);
         this.currentItemHandTut = null;
+        this.countStep(targetPeeler ?? 'plastic-peeler');
         this.TypeHind = TypeHind.Drag;
     }
 
@@ -312,7 +342,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         const radius = this.lastBowlRotateRadius || 80;
 
         this.playCircularRotationHint(centerPos, radius);
-        this.currentItemHandTut = targetLastBowl;
+        this.setCurrentItemHandTut(targetLastBowl);
         this.TypeHind = TypeHind.Stir;
     }
 
@@ -450,13 +480,13 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         // Current processing items always have priority, while retaining the
         // Inspector list order and skipping invalid entries.
         for (const item of this.items) {
-            if (!item?.onProcess || !this.canShowTutorialForItem(item)) continue;
+            if (!item?.onProcess || !this.isAllowed(item) || !this.canShowTutorialForItem(item)) continue;
             return item;
         }
 
         // If nothing is currently processing, fall back to the ordered list.
         for (const item of this.items) {
-            if (!this.canShowTutorialForItem(item)) continue;
+            if (!item || !this.isAllowed(item) || !this.canShowTutorialForItem(item)) continue;
             return item;
         }
 
@@ -471,7 +501,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
             const target = this.sinkBlock.insideDefaultTarget;
             if (target?.isValid && this.sinkBlock.itemDraggable?.CanDrag()) {
                 this.playMoveHint(this.sinkBlock.node, target);
-                this.currentItemHandTut = this.sinkBlock;
+                this.setCurrentItemHandTut(this.sinkBlock);
                 this.TypeHind = TypeHind.Drag;
                 return true;
             }
@@ -480,6 +510,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         if (this.shouldShowWaterToggleHandTut()) {
             this.playClickHint(this.sinkButton!.node);
             this.currentItemHandTut = null;
+            this.countStep(this.sinkButton!);
             this.TypeHind = TypeHind.Click;
             return true;
         }
@@ -719,7 +750,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         this.handNode.setScale(this.handDefaultScale);
         this.setHandAlpha(this.handDefaultAlpha);
         this.handNode.active = true;
-        this.shownCount++;
         this.hasShownFirstHint = true;
         this.forceNoDelay = false;
         return this.currentHintToken;
@@ -727,7 +757,15 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private setCurrentItemHandTut(item: Item): void {
         this.currentItemHandTut = item;
+        this.countStep(item);
         item.OnHandTutShown();
+    }
+
+    /** shownCount counts distinct steps, not displays: repeating the same hint after a touch is free. */
+    private countStep(subject: object | string): void {
+        if (subject === this.lastCountedSubject) return;
+        this.lastCountedSubject = subject;
+        this.shownCount++;
     }
 
     private hideHandTut(): void {

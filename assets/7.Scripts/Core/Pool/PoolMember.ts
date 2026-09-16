@@ -21,7 +21,8 @@ export enum PoolType {
     BreakHeartFX,
     BlinkFX,
     WaterSplash,
-    ClockTimer
+    ClockTimer,
+    FoodSpark
 }
 
 @ccclass

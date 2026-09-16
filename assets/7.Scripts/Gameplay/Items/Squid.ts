@@ -104,6 +104,9 @@ export class Squid extends Item {
 
     protected start(): void {
         this.ApplyDefaultZoom();
+        // Until the squid has left the board and the zoom played, the hand
+        // tutorial may only guide the squid itself and the knife.
+        HandTutManager.Ins?.RestrictTo([this, this.knife?.getComponent(Item) ?? null]);
     }
 
     protected onDisable(): void {
@@ -130,8 +133,9 @@ export class Squid extends Item {
 
     private OnFootTouchStart(event: EventTouch): void {
         if (this.isFinished) return;
-        // The foot swallows this touch, so InputManager never sees it.
+        // The foot swallows this touch, so InputManager / HandTutManager never see it.
         InputManager.Ins?.RegisterFirstMove();
+        HandTutManager.Ins?.OnGameplayDragBegin();
         this.touchStartX = event.getUILocation().x;
         this.hasProcessedCurrentDrag = false;
     }
@@ -142,6 +146,7 @@ export class Squid extends Item {
 
     private OnFootTouchEnd(event: EventTouch): void {
         this.TryProcessLeftDrag(event.getUILocation().x);
+        HandTutManager.Ins?.OnGameplayDragEnd();
     }
 
     private TryProcessLeftDrag(currentX: number): void {
@@ -171,6 +176,7 @@ export class Squid extends Item {
     private FinishFoot(): void {
         if (!this.squidFoot?.isValid) return;
         this.isFinished = true;
+        HandTutManager.Ins?.RegisterCorrectAction();
         const opacity = this.squidFoot.getComponent(UIOpacity) ?? this.squidFoot.addComponent(UIOpacity);
 
         Tween.stopAllByTarget(this.squidFoot);
@@ -221,7 +227,10 @@ export class Squid extends Item {
     }
 
     private ZoomOut(): void {
-        if (!this.zoomOutTarget?.isValid) return;
+        if (!this.zoomOutTarget?.isValid) {
+            HandTutManager.Ins?.ClearRestriction();
+            return;
+        }
         Tween.stopAllByTarget(this.zoomOutTarget);
 
         // No gameplay input while the zoom is playing.
@@ -231,7 +240,11 @@ export class Squid extends Item {
                 position: new Vec3(this.zoomOutPosition.x, this.zoomOutPosition.y, this.zoomOutTarget.position.z),
                 scale: new Vec3(this.zoomOutScale.x, this.zoomOutScale.y, this.zoomOutTarget.scale.z),
             }, { easing: 'sineInOut' })
-            .call(() => GameManager.Ins?.SetIsPlaying(true))
+            .call(() => {
+                GameManager.Ins?.SetIsPlaying(true);
+                // The rest of the kitchen is now reachable for the hand tutorial.
+                HandTutManager.Ins?.ClearRestriction();
+            })
             .start();
     }
 
