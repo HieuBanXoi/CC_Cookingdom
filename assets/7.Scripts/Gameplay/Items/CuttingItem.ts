@@ -5,6 +5,7 @@ import { CuttingBoard } from './CuttingBoard';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
+import { Trash, ITrashOwner } from './Trash';
 
 const { ccclass, property } = _decorator;
 
@@ -19,19 +20,22 @@ Enum(CuttingMoveDestination);
  * to the plate. Same flow as InWaterItem without the sink / water phase.
  */
 @ccclass('CuttingItem')
-export class CuttingItem extends Item {
+export class CuttingItem extends Item implements ITrashOwner {
 
     @property({ type: Node, tooltip: 'Cutting board target node' })
     public cuttingBoardTarget: Node = null!;
 
-    @property({ type: Node, tooltip: 'Plate target node' })
+    @property({ type: Node, tooltip: 'Plate landing point. Can be a plain node: several items may share one plate but land on different points.' })
     public plateTarget: Node = null!;
+
+    @property({ type: Enum(ItemType), tooltip: 'ItemType accepted as the plate drop target (the shared plate Item), independent of plateTarget.' })
+    public plateTargetItemType: ItemType = ItemType.Plate;
 
     @property({ type: [Node], tooltip: 'Child objects attached to this item' })
     public childObject: Node[] = [];
 
-    @property({ type: [Node], tooltip: 'Trash / waste objects attached to this item' })
-    public trashObj: Node[] = [];
+    @property({ type: [Trash], tooltip: 'Trash attached to this item. Locked until CanTrashDrag(); the board is released only once all are cleared.' })
+    public trashObj: Trash[] = [];
 
     @property({ tooltip: 'Is item currently on cutting board' })
     public isOnCuttingBoard: boolean = false;
@@ -120,8 +124,7 @@ export class CuttingItem extends Item {
         }
 
         if (!this.jumpToPlateAfterCutDone) {
-            const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
-            cuttingBoard?.IsFoodOn(false);
+            this.TryReleaseCuttingBoard();
             return;
         }
 
@@ -185,12 +188,12 @@ export class CuttingItem extends Item {
     }
 
     public OnMoveToPlateComplete(): void {
-        const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
-        cuttingBoard?.IsFoodOn(false);
+        this.TryReleaseCuttingBoard();
 
         this.isOnCuttingBoard = false;
         this.isOnPlate = true;
         this.onProcess = false;
+        this.ItemDone();
 
         this.SetPlateFoodShadowActive(false);
 
@@ -225,6 +228,17 @@ export class CuttingItem extends Item {
 
         this.cacheComponents(true);
         this.initialized = true;
+
+        // The board may be occupied (its Item reports None) when this item is
+        // still in the pile, so the hand tutorial must check the target's type.
+        this.requireMatchingTargetTypeForHandTut = true;
+
+        // Trash starts locked; CanTrashDrag() unlocks it later.
+        for (const trash of this.trashObj) {
+            if (!trash) continue;
+            trash.owner = this;
+            if (!trash.IsCleared) trash.DisableDrag();
+        }
 
         this.SubscribeMovementEvents();
         this.ConfigureNextTarget();
@@ -288,9 +302,8 @@ export class CuttingItem extends Item {
             // food occupies it, so do not copy its current itemType.
             this.itemDraggable.targetItemType = ItemType.CuttingBoard;
         } else {
-            // Plate: use its Item type when present, otherwise ItemType.Plate.
-            const targetItem = this.GetTargetItem(nextTarget);
-            this.itemDraggable.targetItemType = targetItem ? targetItem.itemType : ItemType.Plate;
+            // Plate: the drop target is the shared plate Item; plateTarget is only the landing point.
+            this.itemDraggable.targetItemType = this.plateTargetItemType;
         }
 
         if (nextTarget) {
@@ -366,12 +379,31 @@ export class CuttingItem extends Item {
         }
     }
 
+    /** Unlocks every attached Trash so the player can throw it into the TrashBin. */
     public CanTrashDrag(): void {
-        for (let i = 0; i < this.trashObj.length; i++) {
-            const trash = this.trashObj[i];
-            if (trash && trash.isValid) {
-                trash.active = true;
-            }
+        for (const trash of this.trashObj) {
+            if (!trash?.isValid) continue;
+            trash.owner = this;
+            trash.EnableDrag();
         }
+    }
+
+    public IsAllTrashCleared(): boolean {
+        for (const trash of this.trashObj) {
+            if (trash?.isValid && !trash.IsCleared) return false;
+        }
+        return true;
+    }
+
+    /** ITrashOwner: a trash landed in the bin. */
+    public OnTrashCleared(_trash: Trash): void {
+        this.TryReleaseCuttingBoard();
+    }
+
+    /** The board is handed back to the next food only when this item is cut AND all its trash is gone. */
+    protected TryReleaseCuttingBoard(): void {
+        if (!this.isCutDone || !this.IsAllTrashCleared()) return;
+        const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
+        cuttingBoard?.IsFoodOn(false);
     }
 }

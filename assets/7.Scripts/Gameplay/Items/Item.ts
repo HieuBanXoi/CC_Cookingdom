@@ -19,6 +19,21 @@ import { PhaseManager } from '../../Managers/PhaseManager';
 
 const { ccclass, property } = _decorator;
 
+/**
+ * Custom hand-tutorial hint for gestures HandTutManager cannot infer from
+ * ItemClickable / ItemDraggable / ItemStirring (swipes, off-screen targets...).
+ * World-space positions.
+ */
+export interface HandTutHint {
+    kind: 'click' | 'drag' | 'path';
+    /** click: the point to tap. drag: start. */
+    from?: Vec3;
+    /** drag: end. */
+    to?: Vec3;
+    /** path: waypoints (>= 2). */
+    path?: Vec3[];
+}
+
 @ccclass('Item')
 export class Item extends Ply_GameUnit {
 
@@ -344,6 +359,20 @@ export class Item extends Ply_GameUnit {
         this.isDone = true;
     }
 
+    /**
+     * Override to guide a custom gesture. Return null when nothing custom is
+     * needed; HandTutManager then falls back to the component-based rules.
+     */
+    public GetHandTutHint(): HandTutHint | null {
+        return null;
+    }
+
+    /** HandTutManager started showing a hint for this item. */
+    public OnHandTutShown(): void {}
+
+    /** HandTutManager stopped showing the hint for this item (touch, done, phase change...). */
+    public OnHandTutHidden(): void {}
+
     /** Marks the item complete, then returns it to its start position without a fail effect. */
     public DoneAnimation() {
         this.ItemDone();
@@ -379,7 +408,19 @@ export class Item extends Ply_GameUnit {
         PhaseManager.Ins?.DoOneStep();
     }
 
+    /** Serialized caches can point at another node's component (copied prefab/Inspector). Re-cache when so. */
+    private ensureOwnComponents(): void {
+        const comps = [this.itemDraggable, this.itemClickable, this.itemStirring, this.itemMoveToTarget, this.itemSound];
+        for (const c of comps) {
+            if (c && c.node !== this.node) {
+                this.cacheComponents(true);
+                return;
+            }
+        }
+    }
+
     public EnableItemDraggable() {
+        this.ensureOwnComponents();
         if (!this.itemDraggable) {
             this.itemDraggable = this.getComponent(ItemDraggable) || ComponentCache.get(this.node, ItemDraggable);
         }
@@ -390,12 +431,14 @@ export class Item extends Ply_GameUnit {
     }
 
     public DisableItemDraggable() {
+        this.ensureOwnComponents();
         if (this.itemDraggable) {
             this.itemDraggable.enabled = false;
         }
     }
 
     public EnableItemClickable() {
+        this.ensureOwnComponents();
         if (!this.itemClickable) {
             this.itemClickable = this.getComponent(ItemClickable) || ComponentCache.get(this.node, ItemClickable);
         }
@@ -406,12 +449,14 @@ export class Item extends Ply_GameUnit {
     }
 
     public DisableItemClickable() {
+        this.ensureOwnComponents();
         if (this.itemClickable) {
             this.itemClickable.enabled = false;
         }
     }
 
     public EnableClick() {
+        this.ensureOwnComponents();
         if (!this.itemClickable) {
             this.itemClickable = this.getComponent(ItemClickable) || ComponentCache.get(this.node, ItemClickable);
         }
@@ -419,10 +464,12 @@ export class Item extends Ply_GameUnit {
     }
 
     public DisableClick() {
+        this.ensureOwnComponents();
         this.itemClickable?.DisableClick();
     }
 
     public EnableItemStirring() {
+        this.ensureOwnComponents();
         if (!this.itemStirring) {
             this.itemStirring = this.getComponent(ItemStirring) || ComponentCache.get(this.node, ItemStirring);
         }
@@ -432,6 +479,7 @@ export class Item extends Ply_GameUnit {
     }
 
     public DisableItemStirring() {
+        this.ensureOwnComponents();
         if (this.itemStirring) {
             this.itemStirring.enabled = false;
         }

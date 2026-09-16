@@ -115,14 +115,15 @@ export class InputManager extends Ply_Singleton<InputManager> {
         // not depend on dragging or successfully interacting with an item.
         this.RegisterFirstMove();
 
-        const draggable = this.getTouchedComponent(event, ItemDraggable);
+        const draggable = this.getTouchedComponent(event, ItemDraggable, d => d.enabled);
         if (draggable && draggable.enabled) {
             this.BeginDragItem(draggable);
         } else {
             // A locked ItemDraggable must not hide an active stir/click on the
             // same item (e.g. food on the cutting board waiting for taps).
-            const stirring = this.getTouchedComponent(event, ItemStirring);
-            const clickable = stirring && stirring.enabled ? null : this.getTouchedComponent(event, ItemClickable);
+            const stirring = this.getTouchedComponent(event, ItemStirring, s => s.enabled);
+            const clickable = stirring && stirring.enabled ? null
+                : this.getTouchedComponent(event, ItemClickable, c => c.enabled && c.canClick);
             if (stirring && stirring.enabled) {
                 this.BeginStirItem(stirring, event);
             } else if (clickable && clickable.canClick && clickable.enabled) {
@@ -193,16 +194,31 @@ export class InputManager extends Ply_Singleton<InputManager> {
         this.bindingUpdate();
     }
 
-    private getTouchedComponent<T>(event: EventTouch, componentType: new (...args: any[]) => T): T | null {
+    /**
+     * Finds a component of the given type under the touch. When `prefer` is
+     * given, the topmost hit satisfying it wins (e.g. an enabled draggable
+     * over a locked trash child sitting on the same food); otherwise the
+     * topmost hit is returned so locked items can still give feedback.
+     */
+    private getTouchedComponent<T>(
+        event: EventTouch,
+        componentType: new (...args: any[]) => T,
+        prefer?: (component: T) => boolean,
+    ): T | null {
+        let fallback: T | null = null;
+
         let target = event.target as Node | null;
         while (target) {
             const component = target.getComponent(componentType as any) as T | null;
-            if (component) return component;
+            if (component) {
+                if (!prefer || prefer(component)) return component;
+                fallback ??= component;
+            }
             target = target.parent;
         }
 
         const scene = this.node.scene;
-        if (!scene) return null;
+        if (!scene) return fallback;
 
         const touchPosition = event.getUILocation();
         const worldTouchPosition = new Vec3(touchPosition.x, touchPosition.y, 0);
@@ -218,9 +234,10 @@ export class InputManager extends Ply_Singleton<InputManager> {
             const bottom = -transform.anchorY * transform.height;
             if (localPoint.x >= left && localPoint.x <= left + transform.width
                 && localPoint.y >= bottom && localPoint.y <= bottom + transform.height) {
-                return component as T;
+                if (!prefer || prefer(component as T)) return component as T;
+                fallback ??= component as T;
             }
         }
-        return null;
+        return fallback;
     }
 }

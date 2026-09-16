@@ -5,6 +5,7 @@ import { ComponentCache } from '../../Core/Base/CacheComponent';
 import { HandTutManager } from '../../Managers/HandTutManager';
 import { InputManager } from '../../Managers/InputManager';
 import { GameManager } from '../../Managers/GameManager';
+import { HandTutHint } from './Item';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { CuttingBoard } from './CuttingBoard';
 
@@ -49,6 +50,9 @@ export class Squid extends Item {
     @property({ min: 1, tooltip: 'Minimum leftward drag distance in local UI units.' })
     public minimumLeftDragDistance = 24;
 
+    @property({ min: 1, tooltip: 'Length of the hand-tutorial swipe, in world units.' })
+    public handTutSwipeDistance = 120;
+
     @property({ min: 0, tooltip: 'How far the foot slides left when complete.' })
     public finishMoveLeftDistance = 35;
 
@@ -69,6 +73,8 @@ export class Squid extends Item {
     private headOriginalScale = new Vec3();
 
     private readonly onMoveComplete = (): void => this.OnLeftCuttingBoard();
+    // Once dropped, the squid is flying to its target: no more dragging (and no drag hint).
+    private readonly onDropSuccess = (): void => { if (this.itemDraggable) this.itemDraggable.isDraggable = false; };
 
     protected onLoad(): void {
         super.onLoad();
@@ -92,6 +98,8 @@ export class Squid extends Item {
         // Zoom out only after the squid has been dragged and arrived at its target.
         this.itemMoveToTarget?.node.off(ItemMoveToTarget.EVENT_COMPLETE, this.onMoveComplete, this);
         this.itemMoveToTarget?.node.on(ItemMoveToTarget.EVENT_COMPLETE, this.onMoveComplete, this);
+        this.itemDraggable?.onDropSuccess.removeListener(this.onDropSuccess);
+        this.itemDraggable?.onDropSuccess.addListener(this.onDropSuccess);
     }
 
     protected start(): void {
@@ -101,6 +109,7 @@ export class Squid extends Item {
     protected onDisable(): void {
         this.UnbindFootTouch();
         this.itemMoveToTarget?.node.off(ItemMoveToTarget.EVENT_COMPLETE, this.onMoveComplete, this);
+        this.itemDraggable?.onDropSuccess.removeListener(this.onDropSuccess);
     }
 
     private UnbindFootTouch(): void {
@@ -194,9 +203,20 @@ export class Squid extends Item {
         return targetPosition;
     }
 
+    /** Swipe-left hint on the foot while the tail phase is still running. */
+    public override GetHandTutHint(): HandTutHint | null {
+        if (this.isFinished || !this.squidFoot?.activeInHierarchy) return null;
+        const from = this.squidFoot.worldPosition.clone();
+        const to = new Vec3(from.x - this.handTutSwipeDistance, from.y, from.z);
+        return { kind: 'drag', from, to };
+    }
+
     /** The squid started on the board, so free the board for the next food once it arrives at its target. */
     private OnLeftCuttingBoard(): void {
         this.cuttingBoard?.IsFoodOn(false);
+        // Nothing left to do with the squid: lock it and drop it from the hand tutorial.
+        this.DisableItemDraggable();
+        this.ItemDone();
         this.ZoomOut();
     }
 

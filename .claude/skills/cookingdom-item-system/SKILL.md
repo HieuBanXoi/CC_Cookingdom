@@ -126,7 +126,13 @@ code riêng cho từng loại item:
 Điều kiện chung: `!item.isDone && node.activeInHierarchy`. Item có `onProcess = true` được ưu tiên
 trước. Thứ tự xét trong `showNextHandTut`: ItemDragRaycastTarget → Click → Drag → Stir.
 
+Cử chỉ tuỳ biến (vuốt, đích ẩn ngoài màn hình...): override `Item.GetHandTutHint(): HandTutHint | null`
+trả về `{ kind: 'click' | 'drag' | 'path', from, to, path }` (world position). HandTut ưu tiên hint này trước
+các rule component; trả `null` khi không cần (ví dụ `Squid` vuốt đuôi, `Trash` trỏ tới vị trí thùng rác khi hiện).
+
 Hệ quả thực hành:
+- Item kéo tới đích có thể đang bận (thớt đang có món, `itemType` đích = None): bật `requireMatchingTargetTypeForHandTut` (CuttingItem tự bật) để HandTut chỉ gợi ý khi `itemType` của đích khớp. Đích có thể là node điểm con; HandTut tự tìm `Item` ở cha.
+- Item xong việc phải `ItemDone()` (hoặc `DisableItemDraggable()`), nếu không HandTut sẽ gợi ý lại mãi.
 - Muốn item **chưa** được hướng dẫn: `DisableComponent()` component tương ứng (drag/click/stir). Khi tới lượt, `EnableComponent()`.
 - Muốn item **không bao giờ** được hướng dẫn nữa: `ItemDone()` (HandTut tự `removeCompletedItems`) hoặc `HandTutManager.Ins.ItemDone(node)`.
 - Item spawn lúc runtime: `HandTutManager.Ins?.RegisterTutorialItem(item)`.

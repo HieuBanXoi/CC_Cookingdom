@@ -74,6 +74,11 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         this.originalParent = this.node.parent;
     }
 
+    /** Re-caches the parent restored after a move. Call after intentionally reparenting the item. */
+    public RefreshOriginalParent(): void {
+        this.originalParent = this.node.parent;
+    }
+
     public ExecuteMove() {
         this.ExecuteMove2D(this.defaultTarget);
     }

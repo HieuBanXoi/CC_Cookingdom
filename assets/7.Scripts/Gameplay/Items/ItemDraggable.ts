@@ -60,6 +60,9 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     @property
     public dragScaleDuration: number = 0.15;
 
+    @property({ min: 0, tooltip: 'Break heart on drop fail only if the item was dragged farther than this (world units). A short tap/nudge returns silently.' })
+    public minDragDistanceForBreakHeart: number = 30;
+
     @property({ type: Ply_Event, tooltip: 'On begin drag event' })
     public onBeginDrag: Ply_Event = new Ply_Event();
 
@@ -79,6 +82,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private originalLocalPos: Vec3 = new Vec3();
     private originalScale: Vec3 = new Vec3();
     private originalWorldScale: Vec3 = new Vec3();
+    private dragStartWorldPos: Vec3 = new Vec3();
     private originalWorldPos: Vec3 = new Vec3();
 
     private isDraggingSession: boolean = false;
@@ -195,6 +199,8 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             Vec3.multiply(this.originalWorldScale, this.originalParent.worldScale, this.originalScale);
         }
 
+        Vec3.copy(this.dragStartWorldPos, this.node.worldPosition);
+
         // Move to InputManager.Ins.draggingNode to display on top of other elements
         if (InputManager.Ins && InputManager.Ins.draggingNode && InputManager.Ins.draggingNode.isValid && InputManager.Ins.draggingNode.activeInHierarchy) {
             const worldPos = this.node.worldPosition.clone();
@@ -227,9 +233,10 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.onDropFail.invoke();
 
             // Show the failure feedback at the rejected drop position, before
-            // this item starts travelling back to its origin.
+            // this item starts travelling back to its origin. A tap or a tiny
+            // nudge is not a real failed attempt, so it gets no break heart.
             if (this.spawnBreakHeartOnDropFail && !this.suppressCurrentDropFailEffect
-                && !this.currentDropFailIsValidAction && this.item) {
+                && !this.currentDropFailIsValidAction && this.item && this.HasDraggedFarEnough()) {
                 this.item.SpawnBreakHeart();
             }
 
@@ -385,6 +392,12 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             && this.originalSiblingIndex >= 0 && this.originalSiblingIndex < this.originalParent.children.length) {
             this.node.setSiblingIndex(this.originalSiblingIndex);
         }
+    }
+
+    /** True when the item moved farther than minDragDistanceForBreakHeart since BeginDrag. */
+    public HasDraggedFarEnough(): boolean {
+        if (this.minDragDistanceForBreakHeart <= 0) return true;
+        return Vec3.distance(this.node.worldPosition, this.dragStartWorldPos) >= this.minDragDistanceForBreakHeart;
     }
 
     public CanDrag(): boolean {

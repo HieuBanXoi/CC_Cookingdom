@@ -1,5 +1,5 @@
 import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, UITransform, Vec3 } from 'cc';
-import { Item } from '../Gameplay/Items/Item';
+import { Item, HandTutHint } from '../Gameplay/Items/Item';
 import { ItemStirring } from '../Gameplay/Items/ItemStirring';
 import { ItemDragRaycastTarget } from '../Gameplay/Items/ItemDragRaycastTarget';
 import { InWaterItem } from '../Gameplay/Items/InWaterItem';
@@ -10,6 +10,7 @@ import { LastBowl } from '../Gameplay/Items/LastBowl';
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { ComponentCache } from '../Core/Base/CacheComponent';
 import { InputManager } from './InputManager';
+import { GameManager } from './GameManager';
 import { ItemType } from '../Gameplay/Items/ItemType';
 
 const { ccclass, property } = _decorator;
@@ -143,7 +144,11 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         // Use InputManager as the source of truth as well as the local events.
         // Some drag tools are added at runtime and may not be in `items`, so
         // they do not necessarily have an onBeginDrag listener here.
-        if (this.isPointerDown || this.isGameplayDragging || InputManager.Ins?.isDragging) {
+        // Also stay quiet while gameplay input is locked (an item is flying to
+        // its target, a zoom is playing...): a hint then would point at an item
+        // the player cannot touch yet, and could linger after it moved away.
+        const inputLocked = !!GameManager.Ins && !GameManager.Ins.IsPlaying();
+        if (this.isPointerDown || this.isGameplayDragging || InputManager.Ins?.isDragging || inputLocked) {
             this.resetIdleTimer();
             this.hideHandTut();
             return;
@@ -410,25 +415,33 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
             return;
         }
 
+        // Items with a custom gesture describe their own hint.
+        const customHint = item.GetHandTutHint();
+        if (customHint) {
+            this.playCustomHint(customHint);
+            this.setCurrentItemHandTut(item);
+            return;
+        }
+
         const dragRaycastTarget = item.getComponent(ItemDragRaycastTarget);
         const raycastDefaultTarget = item.itemMoveToTarget?.defaultTarget;
         if (dragRaycastTarget && this.isDraggableReady(item) && raycastDefaultTarget?.isValid) {
             // This interaction changes its accepted ItemType dynamically while
             // dragging, so the hint must always use its configured default target.
             this.playMoveHint(item.node, raycastDefaultTarget);
-            this.currentItemHandTut = item;
+            this.setCurrentItemHandTut(item);
             this.TypeHind = TypeHind.Drag;
         } else if (this.isClickableReady(item)) {
             this.playClickHint(item.node);
-            this.currentItemHandTut = item;
+            this.setCurrentItemHandTut(item);
             this.TypeHind = TypeHind.Click;
         } else if (this.isDraggableReady(item) && this.hasValidDragTarget(item)) {
             this.playMoveHint(item.node, item.itemMoveToTarget!.defaultTarget);
-            this.currentItemHandTut = item;
+            this.setCurrentItemHandTut(item);
             this.TypeHind = TypeHind.Drag;
         } else if (this.isStirringReady(item)) {
             this.playStirringHint(item.itemStirring!);
-            this.currentItemHandTut = item;
+            this.setCurrentItemHandTut(item);
             this.TypeHind = TypeHind.Stir;
         }
     }
@@ -495,6 +508,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private canShowTutorialForItem(item: Item): boolean {
         if (!item || item.isDone || !item.node.activeInHierarchy) return false;
+        if (item.GetHandTutHint()) return true;
 
         const hasDragRaycastTarget = !!item.getComponent(ItemDragRaycastTarget);
 
@@ -528,8 +542,37 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         if (!target || !target.isValid || !draggable) return false;
         if (!item.requireMatchingTargetTypeForHandTut) return true;
 
-        const targetItem = target.getComponent(Item);
+        // The default target may be a landing point inside the real drop
+        // target (e.g. a point on a plate), so look for the Item upwards.
+        const targetItem = this.findItemInParents(target);
         return !!targetItem && targetItem.itemType === draggable.targetItemType;
+    }
+
+    private findItemInParents(node: Node | null): Item | null {
+        let current: Node | null = node;
+        while (current) {
+            const item = current.getComponent(Item);
+            if (item) return item;
+            current = current.parent;
+        }
+        return null;
+    }
+
+    private playCustomHint(hint: HandTutHint): void {
+        switch (hint.kind) {
+            case 'click':
+                if (hint.from) this.playClickHintAt(hint.from);
+                this.TypeHind = TypeHind.Click;
+                break;
+            case 'drag':
+                if (hint.from && hint.to) this.playMoveHint(hint.from, hint.to);
+                this.TypeHind = TypeHind.Drag;
+                break;
+            case 'path':
+                if (hint.path && hint.path.length >= 2) this.playMovePathPositions(hint.path);
+                this.TypeHind = TypeHind.Drag;
+                break;
+        }
     }
 
     private isStirringReady(item: Item): boolean {
@@ -537,7 +580,11 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     private playClickHint(target: Node): void {
-        const token = this.prepareHand(target.worldPosition);
+        this.playClickHintAt(target.worldPosition);
+    }
+
+    private playClickHintAt(position: Vec3): void {
+        const token = this.prepareHand(position);
         const loop = () => {
             if (!this.isHintCurrent(token)) return;
             tween(this.handNode)
@@ -599,6 +646,10 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     /** Plays a multi-step drag route, used for Spoon → seasoning → FoodOil. */
     private playMovePathHint(nodes: Node[], durationMultiplier = 1): void {
         const positions = nodes.filter(node => !!node?.isValid).map(node => node.worldPosition.clone());
+        this.playMovePathPositions(positions, durationMultiplier);
+    }
+
+    private playMovePathPositions(positions: Vec3[], durationMultiplier = 1): void {
         if (positions.length < 2) return;
         const token = this.prepareHand(positions[0]);
         const loop = (): void => {
@@ -674,9 +725,16 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         return this.currentHintToken;
     }
 
+    private setCurrentItemHandTut(item: Item): void {
+        this.currentItemHandTut = item;
+        item.OnHandTutShown();
+    }
+
     private hideHandTut(): void {
         this.currentHintToken++;
+        const shownItem = this.currentItemHandTut;
         this.currentItemHandTut = null;
+        if (shownItem?.isValid) shownItem.OnHandTutHidden();
         this.TypeHind = TypeHind.None;
         this.activeAuxTween?.stop();
         this.activeAuxTween = null;
