@@ -184,7 +184,6 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     public StartHandTutNoDelay(): void {
         this.forceNoDelay = true;
         this.StartHandTut();
-        if (!this.shouldDelayNextHandTut()) this.showNextHandTut();
     }
 
     /** Stops the idle timer and hides the current hint during a phase transition. */

@@ -54,6 +54,21 @@
     "_exoticAnimation": null,
     "_events": [
       {
+        "frame": 0.21666666666666667,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.21666666666666667,
+        "func": "SpawnFoodSpark",
+        "params": []
+      },
+      {
+        "frame": 0.21666666666666667,
+        "func": "PlayKnifeCutSound",
+        "params": []
+      },
+      {
         "frame": 0.5333333333333333,
         "func": "",
         "params": []
@@ -61,6 +76,41 @@
       {
         "frame": 0.5333333333333333,
         "func": "CanTrashDrag",
+        "params": []
+      },
+      {
+        "frame": 0.7166666666666667,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.7166666666666667,
+        "func": "SpawnFoodSpark",
+        "params": []
+      },
+      {
+        "frame": 0.7166666666666667,
+        "func": "PlayKnifeCutSound",
+        "params": []
+      },
+      {
+        "frame": 1.1,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 1.1,
+        "func": "SpawnFoodSpark",
+        "params": []
+      },
+      {
+        "frame": 1.1,
+        "func": "PlayKnifeCutSound",
+        "params": []
+      },
+      {
+        "frame": 1.1,
+        "func": "PlayKnifeCutSound",
         "params": []
       },
       {
@@ -76,6 +126,11 @@
       {
         "frame": 1.4666666666666666,
         "func": "EnableKnife",
+        "params": []
+      },
+      {
+        "frame": 1.4666666666666666,
+        "func": "PlayItemPlaceSound",
         "params": []
       }
     ],
@@ -176,19 +231,19 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.55,
-      0.7166666666666667,
-      0.9666666666666667,
-      1.1,
-      1.4666666666666666
+      0.21666666865348816,
+      0.550000011920929,
+      0.7166666388511658,
+      0.9666666388511658,
+      1.100000023841858,
+      1.4666666984558105
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 83.32,
+        "value": 83.31999969482422,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -202,7 +257,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 83.32,
+        "value": 83.31999969482422,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -216,7 +271,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 63.877,
+        "value": 63.87699890136719,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -230,7 +285,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 23.339,
+        "value": 23.339000701904297,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -244,7 +299,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -17.314,
+        "value": -17.31399917602539,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -258,7 +313,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 75.898,
+        "value": 75.89800262451172,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -272,7 +327,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 295.071,
+        "value": 295.0710144042969,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -296,19 +351,19 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.55,
-      0.7166666666666667,
-      0.9666666666666667,
-      1.1,
-      1.4666666666666666
+      0.21666666865348816,
+      0.550000011920929,
+      0.7166666388511658,
+      0.9666666388511658,
+      1.100000023841858,
+      1.4666666984558105
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 1.377,
+        "value": 1.3769999742507935,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -322,7 +377,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -169.19,
+        "value": -169.19000244140625,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -336,7 +391,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -1.274,
+        "value": -1.2740000486373901,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -350,7 +405,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -98.184,
+        "value": -98.18399810791016,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -364,7 +419,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 21.124,
+        "value": 21.124000549316406,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -378,7 +433,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -147.729,
+        "value": -147.72900390625,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -392,7 +447,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -12.513,
+        "value": -12.512999534606934,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -416,12 +471,12 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.55,
-      0.7166666666666667,
-      0.9666666666666667,
-      1.1,
-      1.4666666666666666
+      0.21666666865348816,
+      0.550000011920929,
+      0.7166666388511658,
+      0.9666666388511658,
+      1.100000023841858,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -587,12 +642,12 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.55,
-      0.7166666666666667,
-      0.9666666666666667,
-      1.1,
-      1.4666666666666666
+      0.21666666865348816,
+      0.550000011920929,
+      0.7166666388511658,
+      0.9666666388511658,
+      1.100000023841858,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -707,12 +762,12 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.55,
-      0.7166666666666667,
-      0.9666666666666667,
-      1.1,
-      1.4666666666666666
+      0.21666666865348816,
+      0.550000011920929,
+      0.7166666388511658,
+      0.9666666388511658,
+      1.100000023841858,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -827,12 +882,12 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.55,
-      0.7166666666666667,
-      0.9666666666666667,
-      1.1,
-      1.4666666666666666
+      0.21666666865348816,
+      0.550000011920929,
+      0.7166666388511658,
+      0.9666666388511658,
+      1.100000023841858,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -867,7 +922,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -22.7,
+        "value": -22.700000762939453,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -881,7 +936,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -22.7,
+        "value": -22.700000762939453,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -895,7 +950,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 28.9,
+        "value": 28.899999618530273,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -909,7 +964,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 28.9,
+        "value": 28.899999618530273,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1047,17 +1102,17 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.38333333333333336,
-      0.55,
-      0.8833333333333333,
-      0.9666666666666667
+      0.38333332538604736,
+      0.550000011920929,
+      0.8833333253860474,
+      0.9666666388511658
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 84.112,
+        "value": 84.11199951171875,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1071,7 +1126,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 84.112,
+        "value": 84.11199951171875,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1085,7 +1140,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 69.088,
+        "value": 69.08799743652344,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1099,7 +1154,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 69.088,
+        "value": 69.08799743652344,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1113,7 +1168,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -2.497,
+        "value": -2.496999979019165,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1137,17 +1192,17 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.38333333333333336,
-      0.55,
-      0.8833333333333333,
-      0.9666666666666667
+      0.38333332538604736,
+      0.550000011920929,
+      0.8833333253860474,
+      0.9666666388511658
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 1.982,
+        "value": 1.9819999933242798,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1161,7 +1216,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 1.982,
+        "value": 1.9819999933242798,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1175,7 +1230,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 6.401,
+        "value": 6.401000022888184,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1189,7 +1244,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 6.401,
+        "value": 6.401000022888184,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1203,7 +1258,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -6.855,
+        "value": -6.855000019073486,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1227,10 +1282,10 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.38333333333333336,
-      0.55,
-      0.8833333333333333,
-      0.9666666666666667
+      0.38333332538604736,
+      0.550000011920929,
+      0.8833333253860474,
+      0.9666666388511658
     ],
     "_values": [
       {
@@ -1368,10 +1423,10 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.38333333333333336,
-      0.55,
-      0.8833333333333333,
-      0.9666666666666667
+      0.38333332538604736,
+      0.550000011920929,
+      0.8833333253860474,
+      0.9666666388511658
     ],
     "_values": [
       {
@@ -1458,10 +1513,10 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.38333333333333336,
-      0.55,
-      0.8833333333333333,
-      0.9666666666666667
+      0.38333332538604736,
+      0.550000011920929,
+      0.8833333253860474,
+      0.9666666388511658
     ],
     "_values": [
       {
@@ -1548,10 +1603,10 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.38333333333333336,
-      0.55,
-      0.8833333333333333,
-      0.9666666666666667
+      0.38333332538604736,
+      0.550000011920929,
+      0.8833333253860474,
+      0.9666666388511658
     ],
     "_values": [
       {
@@ -1586,7 +1641,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 67.3,
+        "value": 67.30000305175781,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1600,7 +1655,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 67.3,
+        "value": 67.30000305175781,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1614,7 +1669,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 117.2,
+        "value": 117.19999694824219,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1689,14 +1744,14 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.38333333333333336,
-      0.55,
-      0.7166666666666667,
-      0.8833333333333333,
-      0.9666666666666667,
-      1.1,
-      1.2833333333333334
+      0.21666666865348816,
+      0.38333332538604736,
+      0.550000011920929,
+      0.7166666388511658,
+      0.8833333253860474,
+      0.9666666388511658,
+      1.100000023841858,
+      1.2833333015441895
     ],
     "_values": [
       {
@@ -1717,7 +1772,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.8,
+        "value": 0.800000011920929,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1759,7 +1814,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.8,
+        "value": 0.800000011920929,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1801,7 +1856,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.8,
+        "value": 0.800000011920929,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1839,14 +1894,14 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.38333333333333336,
-      0.55,
-      0.7166666666666667,
-      0.8833333333333333,
-      0.9666666666666667,
-      1.1,
-      1.2833333333333334
+      0.21666666865348816,
+      0.38333332538604736,
+      0.550000011920929,
+      0.7166666388511658,
+      0.8833333253860474,
+      0.9666666388511658,
+      1.100000023841858,
+      1.2833333015441895
     ],
     "_values": [
       {
@@ -1867,7 +1922,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.3,
+        "value": 0.30000001192092896,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1909,7 +1964,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.3,
+        "value": 0.30000001192092896,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1951,7 +2006,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.3,
+        "value": 0.30000001192092896,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -1989,21 +2044,21 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0,
-      0.21666666666666667,
-      0.38333333333333336,
-      0.55,
-      0.7166666666666667,
-      0.8833333333333333,
-      0.9666666666666667,
-      1.1,
-      1.2833333333333334
+      0.21666666865348816,
+      0.38333332538604736,
+      0.550000011920929,
+      0.7166666388511658,
+      0.8833333253860474,
+      0.9666666388511658,
+      1.100000023841858,
+      1.2833333015441895
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2017,7 +2072,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2031,7 +2086,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2045,7 +2100,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2059,7 +2114,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2073,7 +2128,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2087,7 +2142,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2101,7 +2156,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2115,7 +2170,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 0.83,
+        "value": 0.8299999833106995,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2189,16 +2244,16 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      0.21666666666666667,
-      0.38333333333333336,
-      0.5333333333333333
+      0.21666666865348816,
+      0.38333332538604736,
+      0.5333333611488342
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 119.691,
+        "value": 119.69100189208984,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2212,7 +2267,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 171.322,
+        "value": 171.32200622558594,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2226,7 +2281,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 217.789,
+        "value": 217.78900146484375,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2249,16 +2304,16 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      0.21666666666666667,
-      0.38333333333333336,
-      0.5333333333333333
+      0.21666666865348816,
+      0.38333332538604736,
+      0.5333333611488342
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -8.527,
+        "value": -8.527000427246094,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2272,7 +2327,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 43.615,
+        "value": 43.6150016784668,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2286,7 +2341,7 @@
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": -8.527,
+        "value": -8.527000427246094,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2309,9 +2364,9 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      0.21666666666666667,
-      0.38333333333333336,
-      0.5333333333333333
+      0.21666666865348816,
+      0.38333332538604736,
+      0.5333333611488342
     ],
     "_values": [
       {
@@ -2506,8 +2561,8 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -2551,15 +2606,15 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {
         "__type__": "cc.RealKeyframeValue",
         "interpolationMode": 0,
         "tangentWeightMode": 0,
-        "value": 139.635,
+        "value": 139.63499450683594,
         "rightTangent": 0,
         "rightTangentWeight": 1,
         "leftTangent": 0,
@@ -2596,8 +2651,8 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -2698,8 +2753,8 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -2743,8 +2798,8 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -2788,8 +2843,8 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {
@@ -2833,8 +2888,8 @@
   {
     "__type__": "cc.RealCurve",
     "_times": [
-      1.2833333333333334,
-      1.4666666666666666
+      1.2833333015441895,
+      1.4666666984558105
     ],
     "_values": [
       {

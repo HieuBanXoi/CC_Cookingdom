@@ -4,6 +4,7 @@ import { TrashBin } from './TrashBin';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { HandTutManager } from '../../Managers/HandTutManager';
+import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 
 const { ccclass, property } = _decorator;
 
@@ -155,6 +156,7 @@ export class Trash extends Item {
     private ThrowInto(target: Node | null): void {
         if (this.isThrowing || this.isCleared) return;
         this.isThrowing = true;
+        Ply_SoundManager.Ins?.PlayFx(FxType.Wipe);
         this.DisableItemDraggable();
 
         const bin = target?.getComponent(TrashBin) ?? this.trashBin;

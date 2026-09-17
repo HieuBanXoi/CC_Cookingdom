@@ -2,6 +2,9 @@ import { _decorator, Node, Sprite, Tween, tween, UITransform, Vec3, math } from 
 import { CuttingItem } from './CuttingItem';
 import { Knife } from './Knife';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
+import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
+import { InputManager } from '../../Managers/InputManager';
+import { GameManager } from '../../Managers/GameManager';
 
 const { ccclass, property } = _decorator;
 
@@ -61,6 +64,7 @@ export class Garlic extends CuttingItem {
     private isPunching = false;
 
     private readonly onClick = (): void => this.OnGarlicClick();
+    private readonly onKnifeSpriteTouch = (): void => this.OnKnifeSpriteTouch();
 
     protected onLoad(): void {
         super.onLoad();
@@ -86,6 +90,32 @@ export class Garlic extends CuttingItem {
     protected onDisable(): void {
         super.onDisable();
         this.itemClickable?.onClick.removeListener(this.onClick);
+        this.UnbindKnifeSpriteTouch();
+    }
+
+    /**
+     * The knife sprite sticks out of the garlic's UITransform, so a tap on the
+     * blade never passes InputManager's hit test on the garlic. Listen on the
+     * sprite itself while cutting; the node swallows the touch, so InputManager
+     * does not see it and a chop is never counted twice.
+     */
+    private BindKnifeSpriteTouch(): void {
+        if (!this.knifeSprite?.isValid) return;
+        this.knifeSprite.off(Node.EventType.TOUCH_START, this.onKnifeSpriteTouch);
+        this.knifeSprite.on(Node.EventType.TOUCH_START, this.onKnifeSpriteTouch);
+    }
+
+    private UnbindKnifeSpriteTouch(): void {
+        this.knifeSprite?.off(Node.EventType.TOUCH_START, this.onKnifeSpriteTouch);
+    }
+
+    private OnKnifeSpriteTouch(): void {
+        if (!this.isCutting || GameManager.Ins?.IsPlaying() !== true) return;
+        const clickable = this.itemClickable;
+        if (!clickable?.enabled || !clickable.canClick) return;
+
+        InputManager.Ins?.RegisterFirstMove();
+        clickable.PerformClick();
     }
 
     /** Called by CuttingItem once the garlic has arrived on the cutting board. */
@@ -105,6 +135,7 @@ export class Garlic extends CuttingItem {
         if (this.isPeeled) return;
 
         this.clickCount++;
+        Ply_SoundManager.Ins?.PlayFx(FxType.Click);
         this.Punch();
 
         if (this.clickCount < this.requiredClicks) return;
@@ -166,6 +197,7 @@ export class Garlic extends CuttingItem {
             this.knifeSprite.active = true;
             this.PlaceKnifeAt(0);
         }
+        this.BindKnifeSpriteTouch();
 
         this.isCutting = true;
         this.itemClickable?.ResetClicks();
@@ -193,6 +225,9 @@ export class Garlic extends CuttingItem {
             .start();
 
         this.Punch();
+        Ply_SoundManager.Ins?.PlayFx(FxType.KnifeCut);
+        // Burst of garlic bits at the knife edge on every chop.
+        this.SpawnFoodSpark();
         if (isLast) this.itemClickable?.DisableComponent();
     }
 
@@ -214,6 +249,7 @@ export class Garlic extends CuttingItem {
 
     private FinishCutting(): void {
         this.isCutting = false;
+        this.UnbindKnifeSpriteTouch();
         if (this.cutSprite) this.cutSprite.fillRange = 1;
 
         // Fly the knife sprite back to the real knife, then hand control back to it.

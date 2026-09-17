@@ -2,6 +2,7 @@ import { _decorator, Node, Tween, tween, UIOpacity, Vec3 } from 'cc';
 import { CuttingItem } from './CuttingItem';
 import { Knife } from './Knife';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
+import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 
 const { ccclass, property } = _decorator;
 
@@ -76,6 +77,7 @@ export class Onion extends CuttingItem {
     private OnOnionClick(): void {
         if (this.isPeeled || !this.isOnCuttingBoard) return;
 
+        Ply_SoundManager.Ins?.PlayFx(FxType.Click);
         this.Punch();
         this.DropLeaf(this.clickCount);
         this.clickCount++;
@@ -84,6 +86,8 @@ export class Onion extends CuttingItem {
 
         this.isPeeled = true;
         this.itemClickable?.DisableComponent();
+        // Peeling is done; further taps are just the player waiting for the knife.
+        this.DisableBreakHeartOnBlockedTap();
         this.SetKnifeTarget();
     }
 

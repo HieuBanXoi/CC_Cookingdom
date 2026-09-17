@@ -32,7 +32,7 @@
       }
     ],
     "_prefab": {
-      "__id__": 16
+      "__id__": 17
     },
     "_lpos": {
       "__type__": "cc.Vec3",
@@ -172,9 +172,9 @@
     "lifeVar": 0,
     "angle": 90,
     "angleVar": 16.9,
-    "startSize": 15,
+    "startSize": 40,
     "startSizeVar": 0,
-    "endSize": 10,
+    "endSize": 20,
     "endSizeVar": 0,
     "startSpin": 0,
     "startSpinVar": 360,
@@ -194,9 +194,9 @@
     "gravity": {
       "__type__": "cc.Vec2",
       "x": 0,
-      "y": -500
+      "y": -2000
     },
-    "speed": 300,
+    "speed": 1000,
     "speedVar": 100,
     "tangentialAccel": 0,
     "tangentialAccelVar": 0,
@@ -216,7 +216,7 @@
     "_custom": true,
     "_file": null,
     "_spriteFrame": {
-      "__uuid__": "a76b0437-74ef-4bbb-b191-2cb01c101ed2@f9941",
+      "__uuid__": "1f7d36ff-f449-4820-92ee-a7569411fe4d@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
     "_totalParticles": 10,
@@ -321,6 +321,9 @@
       },
       {
         "__id__": 15
+      },
+      {
+        "__id__": 16
       }
     ],
     "particle": {
@@ -362,6 +365,14 @@
     "type": 2,
     "spriteFrame": {
       "__uuid__": "a76b0437-74ef-4bbb-b191-2cb01c101ed2@f9941",
+      "__expectedType__": "cc.SpriteFrame"
+    }
+  },
+  {
+    "__type__": "FoodSparkSprite",
+    "type": 8,
+    "spriteFrame": {
+      "__uuid__": "30405aa9-dfea-448c-bcef-11f7740ac612@f9941",
       "__expectedType__": "cc.SpriteFrame"
     }
   },

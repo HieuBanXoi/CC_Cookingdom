@@ -188,6 +188,7 @@ export class CuttingItem extends Item implements ITrashOwner {
     }
 
     public OnMoveToPlateComplete(): void {
+        const wasOnPlate = this.isOnPlate;
         this.TryReleaseCuttingBoard();
 
         this.isOnCuttingBoard = false;
@@ -217,6 +218,10 @@ export class CuttingItem extends Item implements ITrashOwner {
         }
 
         this.SpawnHeart();
+
+        // Landing on the plate is one completed gameplay action. Guarded so a
+        // repeated move-complete on an item already plated cannot count twice.
+        if (!wasOnPlate) this.DoOneStep();
     }
 
     // =========================================================

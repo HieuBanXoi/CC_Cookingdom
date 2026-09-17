@@ -2,6 +2,7 @@ import { _decorator, EventTouch, Node, Tween, tween, UIOpacity, Vec2, Vec3 } fro
 import { Item } from './Item';
 import { Knife } from './Knife';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
+import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 import { HandTutManager } from '../../Managers/HandTutManager';
 import { InputManager } from '../../Managers/InputManager';
 import { GameManager } from '../../Managers/GameManager';
@@ -155,6 +156,8 @@ export class Squid extends Item {
 
         this.hasProcessedCurrentDrag = true;
         this.swipeCount++;
+        // One wipe per swipe: hasProcessedCurrentDrag keeps the move events quiet.
+        Ply_SoundManager.Ins?.PlayFx(FxType.Wipe);
         this.PunchHead();
         if (this.swipeCount >= this.requiredSwipeCount) {
             this.FinishFoot();

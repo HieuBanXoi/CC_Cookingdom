@@ -8,6 +8,7 @@ import { ItemType } from './ItemType';
 import { HeartEffect } from '../Effects/HeartEffect';
 import { BreakHeartEffect } from '../Effects/BreakHeartEffect';
 import { BlinkEffect } from '../Effects/BlinkEffect';
+import { FoodSpark, FoodSparkType } from '../Effects/FoodSpark';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 
 import { ItemDraggable } from './ItemDraggable';
@@ -69,6 +70,15 @@ export class Item extends Ply_GameUnit {
 
     @property({ min: 0 })
     public blinkEffectScale: number = 1.0;
+
+    @property({ tooltip: 'Spawn a break heart when the player taps this item while all its interactions are locked.' })
+    public spawnBreakHeartOnBlockedTap: boolean = true;
+
+    @property({ type: Node, tooltip: 'Where SpawnFoodSpark() plays the spark. Empty = this item position.' })
+    public foodSparkSpawnPos: Node | null = null;
+
+    @property({ type: Enum(FoodSparkType), tooltip: 'Food sprite used by SpawnFoodSpark().' })
+    public foodSparkType: FoodSparkType = FoodSparkType.Default;
 
     // References exposed on Cocos Creator Inspector
     @property({ type: ItemDraggable, tooltip: 'Cached ItemDraggable reference' })
@@ -305,6 +315,20 @@ export class Item extends Ply_GameUnit {
         }
     }
 
+    /** Break heart feedback when the player taps this locked item. Called by InputManager. */
+    public SpawnBreakHeartOnBlockedTap(): void {
+        if (!this.spawnBreakHeartOnBlockedTap) return;
+        this.SpawnBreakHeart();
+    }
+
+    public EnableBreakHeartOnBlockedTap(): void {
+        this.spawnBreakHeartOnBlockedTap = true;
+    }
+
+    public DisableBreakHeartOnBlockedTap(): void {
+        this.spawnBreakHeartOnBlockedTap = false;
+    }
+
     /** Spawns a break heart at another visible node while this item is hidden. */
     public SpawnBreakHeartAt(target: Node | null): void {
         if (!target?.isValid) {
@@ -334,6 +358,70 @@ export class Item extends Ply_GameUnit {
             this.CacheActiveEffect(blinkEffect);
             blinkEffect.DeSpawnByTime();
         }
+    }
+
+    /** Spawns the food spark burst at foodSparkSpawnPos. Call from an animation event. */
+    public SpawnFoodSpark(): void {
+        console.log(`[Item] SpawnFoodSpark called on item "${this.node.name}"`);
+        this.SpawnFoodSparkAtEndOfFrame(this.foodSparkType);
+    }
+
+    /**
+     * Animation-event friendly variant: pass a FoodSparkType name (for example, "Tomato")
+     * to spawn that food's spark without changing foodSparkType.
+     */
+    public SpawnFoodSparkWithType(foodSparkTypeName: string): void {
+        const type = this.ParseFoodSparkType(foodSparkTypeName);
+        if (type === null) return;
+        this.SpawnFoodSparkAtEndOfFrame(type);
+    }
+
+    /**
+     * Animation events fire while the clip is still being sampled, so a spawn node
+     * driven by that clip (the knife) can still report the previous frame's transform.
+     * Reading it once the frame is done pins the spark to where the knife really is.
+     */
+    private SpawnFoodSparkAtEndOfFrame(type: FoodSparkType): void {
+        this.scheduleOnce(() => {
+            if (!this.node?.isValid) return;
+            this.SpawnFoodSparkAt(this.foodSparkSpawnPos, type);
+        }, 0);
+    }
+
+    /** Spawns a food spark at a node (falls back to this item's position), parented to this item. */
+    public SpawnFoodSparkAt(target: Node | null, type: FoodSparkType = this.foodSparkType): FoodSpark | null {
+        const spawnPos = target?.isValid ? target.worldPosition.clone() : this.GetEffectSpawnPosition();
+        const spark = FoodSpark.Spawn(type, spawnPos);
+        if (!spark) return null;
+
+        // Follow the item while it moves; the pool re-parents the spark on despawn.
+        if (spark.node.parent !== this.node) {
+            spark.node.setParent(this.node);
+        }
+        spark.node.setWorldPosition(spawnPos);
+        spark.node.setWorldRotationFromEuler(0, 0, 0);
+        return spark;
+    }
+
+    /** Changes this item's spark type from a FoodSparkType enum name (for example, "Tomato"). */
+    public ChangeFoodSparkType(foodSparkTypeName: string): void {
+        const type = this.ParseFoodSparkType(foodSparkTypeName);
+        if (type === null) return;
+        this.foodSparkType = type;
+    }
+
+    private ParseFoodSparkType(foodSparkTypeName: string): FoodSparkType | null {
+        const normalizedName = foodSparkTypeName?.trim().toLowerCase();
+        const enumKey = Object.keys(FoodSparkType).find(key =>
+            Number.isNaN(Number(key)) && key.toLowerCase() === normalizedName
+        );
+
+        if (!enumKey) {
+            console.warn(`[Item] Invalid FoodSparkType "${foodSparkTypeName}" on ${this.node.name}.`);
+            return null;
+        }
+
+        return FoodSparkType[enumKey as keyof typeof FoodSparkType] as FoodSparkType;
     }
 
     public OnDragFailReturnComplete() {

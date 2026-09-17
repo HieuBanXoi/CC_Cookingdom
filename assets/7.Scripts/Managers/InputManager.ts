@@ -132,7 +132,7 @@ export class InputManager extends Ply_Singleton<InputManager> {
             } else if (draggable) {
                 // Visible gameplay items that are intentionally locked still
                 // give the player clear feedback when touched.
-                (draggable.item ?? draggable.node.getComponent(Item))?.SpawnBreakHeart();
+                (draggable.item ?? draggable.node.getComponent(Item))?.SpawnBreakHeartOnBlockedTap();
             }
         }
         this.bindingStart(event);

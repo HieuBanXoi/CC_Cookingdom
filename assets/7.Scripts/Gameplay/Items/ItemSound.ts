@@ -98,7 +98,7 @@ export class ItemSound extends Ply_EventHandlerComponent {
     public PlayTurningOnStoveSound() {
         this.PlaySoundFX(FxType.TurnOnStove);
     }
-    public PlayCatSound() {
-        this.PlaySoundFX(FxType.Cat);
+    public PlayDropSound() {
+        this.PlaySoundFX(FxType.Drop);
     }
 }
