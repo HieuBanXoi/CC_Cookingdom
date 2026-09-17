@@ -395,6 +395,10 @@ export class InWaterItem extends Item {
         this.onProcess = true;
         this.itemType = ItemType.FoodOnCuttingBoard;
 
+        // On the board the food is often locked while it waits (for the knife,
+        // for a tween...). Taps on it then are not mistakes: no break heart.
+        this.DisableBreakHeartOnBlockedTap();
+
         this.OnMoveToCuttingBoard();
 
         const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;

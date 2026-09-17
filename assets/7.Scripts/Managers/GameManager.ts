@@ -9,6 +9,7 @@ import { LoseState } from './StateMachine/LoseState';
 import { StopGameState } from './StateMachine/StopGameState';
 import { GameController } from '../Platform/GameController';
 import { AppLovinAnalytics } from '../Platform/AppLovinAnalytics';
+import { PhaseManager } from './PhaseManager';
 
 const { ccclass, property } = _decorator;
 
@@ -125,6 +126,9 @@ export class GameManager extends Ply_Singleton<GameManager> {
             const shouldOpenStore = window.confirm(this.storeDialogMessage);
             if (!shouldOpenStore) return;
         }
+        // AppLovin expects 25/50/75 before CTA_CLICKED even when the player
+        // leaves early, so send whatever has not been reached yet.
+        PhaseManager.Ins?.ReportAllProgressMilestones();
         AppLovinAnalytics.ctaClicked();
         GameController.redirectToStore();
     }

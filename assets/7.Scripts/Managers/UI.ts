@@ -61,7 +61,7 @@ export class UI extends Component {
         }
 
         if (this.isGoogleBuild) {
-            this.downloadBtns.forEach(node => node.active = false);
+            this.downloadBtns.forEach(node => { if (node?.isValid) node.active = false; });
         }
     }
 
@@ -229,33 +229,31 @@ export class UI extends Component {
         }, time);
         if(this.width / this.height < 1.5) {
             scale = misc.clampf(scale, 0, 1.1); 
-            this.portraitNodes.forEach((item) => {
-                item.active = true;
-            });
-            this.landscapeNodes.forEach((item) => {
-                item.active = false;
-            });
-            this.adaptUIs.forEach((item) => {
-                item.scale = v3(1, 1, 1);
-            });
-            this.gameplays.forEach((item) => {
-                item.scale = v3(1, 1, 1).multiplyScalar(scale);
-            })      
+            this.setNodesActive(this.portraitNodes, true);
+            this.setNodesActive(this.landscapeNodes, false);
+            this.setNodesScale(this.adaptUIs, 1);
+            this.setNodesScale(this.gameplays, scale);
         } else {
-            this.portraitNodes.forEach((item) => {
-                item.active = false;
-            });
-            this.landscapeNodes.forEach((item) => {
-                item.active = true;
-            });
-            this.adaptUIs.forEach((item) => {
-                item.scale = v3(1, 1, 1).multiplyScalar(2);
-            });
-            this.gameplays.forEach((item) => {
-                item.scale = v3(1, 1, 1).multiplyScalar(1.1);
-            })
+            this.setNodesActive(this.portraitNodes, false);
+            this.setNodesActive(this.landscapeNodes, true);
+            this.setNodesScale(this.adaptUIs, 2);
+            this.setNodesScale(this.gameplays, 1.1);
         }
         this.bind();          
+    }
+
+    // Inspector arrays can hold empty slots or references to deleted nodes;
+    // skip them instead of crashing every resize.
+    private setNodesActive(nodes: Node[], active: boolean) {
+        nodes.forEach((item) => {
+            if (item?.isValid) item.active = active;
+        });
+    }
+
+    private setNodesScale(nodes: Node[], scale: number) {
+        nodes.forEach((item) => {
+            if (item?.isValid) item.scale = v3(scale, scale, scale);
+        });
     }
 
     handTap(node: Node) {
@@ -351,7 +349,7 @@ export class UI extends Component {
 
     start() {
         if (this.isGoogleBuild) {
-            this.textAnims.forEach(anim => anim.stop());
+            this.textAnims.forEach(anim => { if (anim?.isValid && anim.node) anim.stop(); });
         }
     }
 

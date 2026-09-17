@@ -4,6 +4,7 @@ import { HandTutManager } from './HandTutManager';
 import { Ply_Event } from '../Core/Base/Ply_Event';
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { FxType, Ply_SoundManager } from './Ply_SoundManager';
+import { AppLovinAnalytics } from '../Platform/AppLovinAnalytics';
 
 const { ccclass, property } = _decorator;
 
@@ -61,6 +62,13 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
     @property({ readonly: true })
     public currentStepCount = 0;
 
+    /** AppLovin CHALLENGE_PASS_25/50/75, as fractions of the total step count of all phases. */
+    private static readonly PROGRESS_MILESTONES: readonly number[] = [0.25, 0.5, 0.75];
+    /** Steps completed across every phase so far. */
+    private totalStepsDone = 0;
+    /** How many entries of PROGRESS_MILESTONES have been sent. */
+    private reportedMilestoneCount = 0;
+
     /** Local centre position captured from the first active phase. */
     private centerScreenPosition = new Vec3();
     private isChangingPhase = false;
@@ -71,6 +79,17 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
     public get CurrentPhaseObject(): Node | null {
         return this.phases[this.currentPhaseIndex]?.phaseObject ?? null;
+    }
+
+    /** Sum of totalSteps over every phase. */
+    public get TotalSteps(): number {
+        return this.phases.reduce((sum, phase) => sum + Math.max(0, phase?.totalSteps ?? 0), 0);
+    }
+
+    /** Overall playable progress in [0, 1]. */
+    public get Progress(): number {
+        const total = this.TotalSteps;
+        return total > 0 ? Math.min(1, this.totalStepsDone / total) : 0;
     }
 
     protected onLoad(): void {
@@ -92,9 +111,46 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
         if (this.isChangingPhase || !this.hasCurrentPhase()) return false;
 
         this.currentStepCount++;
+        this.totalStepsDone++;
+        this.reportReachedProgressMilestones();
+
         if (!this.IsCurrentPhaseStepComplete()) return false;
 
         return this.TryEndCurrentPhase();
+    }
+
+    // =========================================================
+    // APPLOVIN PROGRESS (CHALLENGE_PASS_25 / 50 / 75)
+    // =========================================================
+
+    /** Sends every milestone the current progress has reached and not yet reported, in order. */
+    private reportReachedProgressMilestones(): void {
+        const milestones = PhaseManager.PROGRESS_MILESTONES;
+        const progress = this.Progress;
+        while (this.reportedMilestoneCount < milestones.length && progress >= milestones[this.reportedMilestoneCount]) {
+            this.sendProgressMilestone(this.reportedMilestoneCount);
+            this.reportedMilestoneCount++;
+        }
+    }
+
+    /**
+     * Sends every milestone not reported yet. Call before CTA_CLICKED /
+     * CHALLENGE_SOLVED so AppLovin always receives 25 -> 50 -> 75 first.
+     */
+    public ReportAllProgressMilestones(): void {
+        const milestones = PhaseManager.PROGRESS_MILESTONES;
+        while (this.reportedMilestoneCount < milestones.length) {
+            this.sendProgressMilestone(this.reportedMilestoneCount);
+            this.reportedMilestoneCount++;
+        }
+    }
+
+    private sendProgressMilestone(index: number): void {
+        switch (index) {
+            case 0: AppLovinAnalytics.challenge25(); break;
+            case 1: AppLovinAnalytics.challenge50(); break;
+            case 2: AppLovinAnalytics.challenge75(); break;
+        }
     }
 
     public IsCurrentPhaseStepComplete(): boolean {

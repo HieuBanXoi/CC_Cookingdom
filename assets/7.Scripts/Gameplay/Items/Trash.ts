@@ -57,6 +57,9 @@ export class Trash extends Item {
         // Locked until the owner calls EnableDrag(). Disabled (not just
         // isDraggable=false) so touches still reach a clickable food underneath.
         this.DisableItemDraggable();
+        // Trash sits on a food on the board; tapping it while locked is just
+        // the player waiting, not a mistake.
+        this.DisableBreakHeartOnBlockedTap();
     }
 
     protected onEnable(): void {

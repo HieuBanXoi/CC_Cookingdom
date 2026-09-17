@@ -6,6 +6,7 @@ import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
 import { Trash, ITrashOwner } from './Trash';
+import { Plate } from './Plate';
 
 const { ccclass, property } = _decorator;
 
@@ -14,6 +15,14 @@ export enum CuttingMoveDestination {
     Plate = 1
 }
 Enum(CuttingMoveDestination);
+
+export enum PlateTargetMode {
+    /** One landing point (plateTarget) on a shared plate Item. */
+    FixedPlateTarget = 0,
+    /** The food lands on any free Plate of plateTargets; the one it is dropped on wins. */
+    PlateList = 1
+}
+Enum(PlateTargetMode);
 
 /**
  * A food item that goes straight to the cutting board, gets cut, then jumps
@@ -25,8 +34,14 @@ export class CuttingItem extends Item implements ITrashOwner {
     @property({ type: Node, tooltip: 'Cutting board target node' })
     public cuttingBoardTarget: Node = null!;
 
-    @property({ type: Node, tooltip: 'Plate landing point. Can be a plain node: several items may share one plate but land on different points.' })
+    @property({ type: Enum(PlateTargetMode), tooltip: 'FixedPlateTarget: land on plateTarget. PlateList: land on whichever free Plate of plateTargets the food is dropped on.' })
+    public plateTargetMode: PlateTargetMode = PlateTargetMode.FixedPlateTarget;
+
+    @property({ type: Node, tooltip: '[FixedPlateTarget] Plate landing point. Can be a plain node: several items may share one plate but land on different points.' })
     public plateTarget: Node = null!;
+
+    @property({ type: [Plate], tooltip: '[PlateList] Plates this food may land on (one food per plate). All must have itemType = plateTargetItemType and a UITransform covering the drop area.' })
+    public plateTargets: Plate[] = [];
 
     @property({ type: Enum(ItemType), tooltip: 'ItemType accepted as the plate drop target (the shared plate Item), independent of plateTarget.' })
     public plateTargetItemType: ItemType = ItemType.Plate;
@@ -72,7 +87,13 @@ export class CuttingItem extends Item implements ITrashOwner {
     protected isMoving: boolean = false;
     private initialized: boolean = false;
     private moveDestination: CuttingMoveDestination = CuttingMoveDestination.CuttingBoard;
+    /** [PlateList] The plate this food is flying to / sitting on. */
+    private currentPlate: Plate | null = null;
     private readonly handleDropSuccess = (target?: Node): void => this.OnDropSuccessMovement(target || null);
+
+    public get CurrentPlate(): Plate | null {
+        return this.currentPlate;
+    }
 
     protected onLoad(): void {
         super.onLoad();
@@ -101,10 +122,19 @@ export class CuttingItem extends Item implements ITrashOwner {
             return;
         }
 
-        if (this.isOnPlate && this.plateTarget && this.plateTarget.isValid) {
-            this.node.setWorldPosition(this.plateTarget.worldPosition);
+        if (this.isOnPlate) {
+            const plateTarget = this.GetPlateTargetNode();
+            if (plateTarget && plateTarget.isValid) {
+                this.node.setWorldPosition(plateTarget.worldPosition);
+            }
         } else if (this.isOnCuttingBoard && this.cuttingBoardTarget && this.cuttingBoardTarget.isValid) {
             this.node.setWorldPosition(this.cuttingBoardTarget.worldPosition);
+        }
+
+        // Waiting to be dragged to a plate: other foods may take plates in the
+        // meantime, so keep the hand-tut target on a plate that is still free.
+        if (this.isCutDone && !this.isOnPlate && this.plateTargetMode === PlateTargetMode.PlateList) {
+            this.RefreshPlateHandTutTarget();
         }
     }
 
@@ -141,10 +171,24 @@ export class CuttingItem extends Item implements ITrashOwner {
         if (this.isMoving || !this.itemMoveToTarget) return;
 
         this.moveDestination = this.GetNextDestination();
+
+        // [PlateList] No plate chosen by a drop (e.g. called from an Inspector
+        // event): take the first free one.
+        if (this.moveDestination === CuttingMoveDestination.Plate
+            && this.plateTargetMode === PlateTargetMode.PlateList
+            && !this.currentPlate?.isValid) {
+            this.currentPlate = this.GetFirstFreePlate();
+        }
+
         const destination = this.GetDestinationTarget(this.moveDestination);
         if (!destination) {
             console.warn(`[CuttingItem] ${this.node.name} is missing the ${this.moveDestination} target.`);
             return;
+        }
+
+        // Reserve the plate right away so no other food picks it while this one is flying.
+        if (this.moveDestination === CuttingMoveDestination.Plate) {
+            this.currentPlate?.IsFoodOn(true);
         }
 
         this.isMoving = true;
@@ -171,6 +215,10 @@ export class CuttingItem extends Item implements ITrashOwner {
         this.isOnPlate = false;
         this.onProcess = true;
         this.itemType = ItemType.FoodOnCuttingBoard;
+
+        // On the board the food is often locked while it waits (for the knife,
+        // for a tween...). Taps on it then are not mistakes: no break heart.
+        this.DisableBreakHeartOnBlockedTap();
 
         this.OnMoveToCuttingBoard();
 
@@ -199,19 +247,20 @@ export class CuttingItem extends Item implements ITrashOwner {
         this.SetPlateFoodShadowActive(false);
 
         if (this.itemDraggable) {
-            this.itemDraggable.returnTransform = this.plateTarget;
+            this.itemDraggable.returnTransform = this.GetPlateTargetNode()!;
             this.itemDraggable.targetItemType = ItemType.None;
             this.itemDraggable.enabled = false;
         }
 
-        if (this.plateTarget && this.plateTarget.isValid) {
-            const plateScale = this.plateTarget.scale.clone();
+        const punchNode = this.GetPlatePunchNode();
+        if (punchNode && punchNode.isValid) {
+            const plateScale = punchNode.scale.clone();
             const punchScale = new Vec3(
                 plateScale.x + this.platePunchScale.x,
                 plateScale.y + this.platePunchScale.y,
                 plateScale.z + this.platePunchScale.z
             );
-            tween(this.plateTarget)
+            tween(punchNode)
                 .to(this.platePunchDuration * 0.5, { scale: punchScale }, { easing: 'sineOut' })
                 .to(this.platePunchDuration * 0.5, { scale: plateScale }, { easing: 'sineIn' })
                 .start();
@@ -288,7 +337,19 @@ export class CuttingItem extends Item implements ITrashOwner {
     }
 
     /** Called after a successful drop. Subclasses may replace the normal movement. */
-    protected OnDropSuccessMovement(_target: Node | null): void {
+    protected OnDropSuccessMovement(target: Node | null): void {
+        // [PlateList] The drop only matched by ItemType, so make sure the plate
+        // is one of ours and still free before flying to it.
+        if (this.plateTargetMode === PlateTargetMode.PlateList
+            && this.GetNextDestination() === CuttingMoveDestination.Plate) {
+            const plate = this.FindPlateInList(target);
+            if (!plate) {
+                this.itemDraggable?.ReturnToStart(true);
+                return;
+            }
+            this.currentPlate = plate;
+        }
+
         this.MoveToCurrentTarget();
     }
 
@@ -317,7 +378,7 @@ export class CuttingItem extends Item implements ITrashOwner {
 
         // Before reaching the board the item returns to wherever it was placed in the scene.
         if (this.isOnPlate) {
-            this.itemDraggable.returnTransform = this.plateTarget;
+            this.itemDraggable.returnTransform = this.GetPlateTargetNode()!;
         } else if (this.isOnCuttingBoard) {
             this.itemDraggable.returnTransform = this.cuttingBoardTarget;
         }
@@ -333,9 +394,66 @@ export class CuttingItem extends Item implements ITrashOwner {
             case CuttingMoveDestination.CuttingBoard:
                 return this.cuttingBoardTarget;
             case CuttingMoveDestination.Plate:
-                return this.plateTarget;
+                return this.GetPlateTargetNode();
             default:
                 return null;
+        }
+    }
+
+    // --- PLATE TARGET (FixedPlateTarget / PlateList) ---
+
+    /**
+     * Landing point for the plate phase. FixedPlateTarget: plateTarget.
+     * PlateList: the chosen plate, or the first free one while none is chosen
+     * yet (used as the hand-tut target before the drop).
+     */
+    protected GetPlateTargetNode(): Node | null {
+        if (this.plateTargetMode === PlateTargetMode.FixedPlateTarget) return this.plateTarget;
+
+        const plate = this.currentPlate?.isValid ? this.currentPlate : this.GetFirstFreePlate();
+        return plate ? plate.LandingPoint : null;
+    }
+
+    /** Node that punches when the food lands: the plate itself, never a bare landing point. */
+    protected GetPlatePunchNode(): Node | null {
+        if (this.plateTargetMode === PlateTargetMode.FixedPlateTarget) return this.plateTarget;
+        return this.currentPlate?.isValid ? this.currentPlate.node : null;
+    }
+
+    protected GetFirstFreePlate(): Plate | null {
+        for (const plate of this.plateTargets) {
+            if (plate?.isValid && plate.IsFree) return plate;
+        }
+        return null;
+    }
+
+    /** The Plate of plateTargets the drop landed on, if it is still free. The drop target is the plate node itself or a child of it. */
+    protected FindPlateInList(target: Node | null): Plate | null {
+        let current: Node | null = target;
+        while (current) {
+            const plate = ComponentCache.get(current, Plate) || current.getComponent(Plate);
+            if (plate) {
+                return this.plateTargets.indexOf(plate) >= 0 && plate.IsFree ? plate : null;
+            }
+            current = current.parent;
+        }
+        return null;
+    }
+
+    /**
+     * [PlateList] Keeps ItemMoveToTarget.defaultTarget (the hand-tut destination)
+     * on a free plate: the current one stays while it is free, otherwise the
+     * first free plate of the list takes over.
+     */
+    private RefreshPlateHandTutTarget(): void {
+        if (!this.itemMoveToTarget || this.currentPlate?.isValid) return;
+
+        const currentTargetPlate = this.FindPlateInList(this.itemMoveToTarget.defaultTarget);
+        if (currentTargetPlate) return;
+
+        const target = this.GetFirstFreePlate()?.LandingPoint ?? null;
+        if (target) {
+            this.itemMoveToTarget.defaultTarget = target;
         }
     }
 
@@ -363,8 +481,9 @@ export class CuttingItem extends Item implements ITrashOwner {
     }
 
     protected override GetEffectSpawnPosition(): Vec3 {
-        if (this.isOnPlate && this.plateTarget && this.plateTarget.isValid) {
-            return this.plateTarget.worldPosition.clone();
+        const plateTarget = this.isOnPlate ? this.GetPlateTargetNode() : null;
+        if (plateTarget && plateTarget.isValid) {
+            return plateTarget.worldPosition.clone();
         }
         return super.GetEffectSpawnPosition();
     }

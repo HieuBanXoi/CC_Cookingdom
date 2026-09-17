@@ -86,8 +86,6 @@ export class Onion extends CuttingItem {
 
         this.isPeeled = true;
         this.itemClickable?.DisableComponent();
-        // Peeling is done; further taps are just the player waiting for the knife.
-        this.DisableBreakHeartOnBlockedTap();
         this.SetKnifeTarget();
     }
 
