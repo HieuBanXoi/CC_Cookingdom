@@ -4,6 +4,7 @@ import { ItemType } from './ItemType';
 import { Knife } from './Knife';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
+import { Trash } from './Trash';
 
 const { ccclass, property } = _decorator;
 
@@ -15,6 +16,11 @@ const { ccclass, property } = _decorator;
  *    FoodWet, so a dragged Paper can sweep over it.
  * 3. The paper wipes it -> the wet nodes fade out, the fish goes back to
  *    FoodOnCuttingBoard and hands itself to the knife.
+ *
+ * Cutting is driven by the AnimationController graph on the node:
+ * knife lands (KnifeIn) -> `KnifeOn`, each tap -> `Cut`. Once the cut animation calls
+ * CanTrashDrag() taps are locked until every trash is in the bin, which fires
+ * `Flip`; the flip animation then calls EnableClick() for the last cut.
  */
 @ccclass('Fish')
 export class Fish extends InWaterItem {
@@ -48,9 +54,21 @@ export class Fish extends InWaterItem {
     @property({ type: Ply_Event, tooltip: 'Triggered once the paper dried the fish (hook for the knife animation).' })
     public onPaperCleaned: Ply_Event = new Ply_Event();
 
+    @property({ tooltip: 'AnimationController trigger fired when the dragged knife lands on the fish (KnifeIn).' })
+    public knifeOnTrigger = 'KnifeOn';
+
+    @property({ tooltip: 'AnimationController trigger fired on every tap while cutting.' })
+    public cutTrigger = 'Cut';
+
+    @property({ tooltip: 'AnimationController trigger fired once every trash is in the bin.' })
+    public flipTrigger = 'Flip';
+
     private isDirtCleaned = false;
     private isWet = false;
     private isPaperCleaned = false;
+    private isFlipped = false;
+
+    private readonly onClick = (): void => this.OnFishClick();
 
     public get IsPaperCleaned(): boolean {
         return this.isPaperCleaned;
@@ -60,6 +78,19 @@ export class Fish extends InWaterItem {
         super.onLoad();
         // The fish only gets wet once it is on the board.
         this.SetWetNodesActive(false);
+        // Tapping is only allowed once the fish is on the board.
+        this.itemClickable?.DisableComponent();
+    }
+
+    protected onEnable(): void {
+        super.onEnable();
+        this.itemClickable?.onClick.removeListener(this.onClick);
+        this.itemClickable?.onClick.addListener(this.onClick);
+    }
+
+    protected onDisable(): void {
+        super.onDisable();
+        this.itemClickable?.onClick.removeListener(this.onClick);
     }
 
     // =========================================================
@@ -91,6 +122,52 @@ export class Fish extends InWaterItem {
 
         // Paper looks for this type while it is being dragged.
         this.itemType = this.wetItemType;
+    }
+
+    // =========================================================
+    // CUTTING: taps drive the animation graph
+    // =========================================================
+
+    /** The dragged knife landed on the fish (Knife.TargetKnifeFlyEvent -> Item.KnifeIn). */
+    public override KnifeIn(): void {
+        super.KnifeIn();
+        if (!this.isOnCuttingBoard) return;
+
+        // The knife comes down and the player can start tapping to cut.
+        this.PlayTrigger(this.knifeOnTrigger);
+        this.EnableClick();
+    }
+
+    private OnFishClick(): void {
+        if (!this.isOnCuttingBoard) return;
+        this.PlayTrigger(this.cutTrigger);
+    }
+
+    /** Re-allows tapping (bound from the flip animation for the last cut). */
+    public override EnableClick(): void {
+        this.itemClickable?.ResetClicks();
+        this.EnableItemClickable();
+        super.EnableClick();
+    }
+
+    /**
+     * Called from the cut animation: the trash can be dragged away and
+     * tapping stops. A Cut queued right before the lock is dropped so it
+     * cannot fire the next cut later.
+     */
+    public override CanTrashDrag(): void {
+        super.CanTrashDrag();
+        this.DisableClick();
+        this.ResetTrigger(this.cutTrigger);
+    }
+
+    /** ITrashOwner: once every trash is in the bin the fish flips over. */
+    public override OnTrashCleared(trash: Trash): void {
+        super.OnTrashCleared(trash);
+        if (this.isFlipped || !this.IsAllTrashCleared()) return;
+
+        this.isFlipped = true;
+        this.PlayTrigger(this.flipTrigger);
     }
 
     // =========================================================

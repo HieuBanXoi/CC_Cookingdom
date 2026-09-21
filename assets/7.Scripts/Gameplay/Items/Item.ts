@@ -245,6 +245,20 @@ export class Item extends Ply_GameUnit {
         }
     }
 
+    /**
+     * Clears a pending AnimationController trigger so a click queued before
+     * the graph consumed it does not fire a transition later.
+     */
+    public ResetTrigger(triggerName: string) {
+        if (!triggerName || triggerName.trim() === '') return;
+
+        if (!this.animationController) {
+            this.animationController = this.getComponent(animation.AnimationController)
+                || this.getComponentInChildren(animation.AnimationController);
+        }
+        this.animationController?.setValue(triggerName, false);
+    }
+
     public GetInPlate(plateNode: Node) {
         const time = 0.5;
         const plateWorld = plateNode.worldPosition;

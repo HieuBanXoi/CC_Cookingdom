@@ -48,12 +48,9 @@ export class GameManager extends Ply_Singleton<GameManager> {
         super.onLoad();
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         this.disableBrowserTouchGestures();
-        AppLovinAnalytics.startLoading();
     }
 
     protected start() {
-        AppLovinAnalytics.loaded();
-        AppLovinAnalytics.displayed();
         this.ChangeState(new OnPlayState());
     }
 

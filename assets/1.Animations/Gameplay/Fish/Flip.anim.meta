@@ -2,12 +2,12 @@
   "ver": "2.0.4",
   "importer": "animation-clip",
   "imported": true,
-  "uuid": "516d0b8b-c322-4f26-aeac-18f1a16a389d",
+  "uuid": "c440cb50-5665-4f60-9688-20eb310b2d77",
   "files": [
     ".bin"
   ],
   "subMetas": {},
   "userData": {
-    "name": "TomatoCut"
+    "name": "Flip"
   }
 }
