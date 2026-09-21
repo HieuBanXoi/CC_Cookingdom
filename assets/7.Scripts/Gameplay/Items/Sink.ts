@@ -1,5 +1,6 @@
 import { _decorator, Node, Vec3, Size, UITransform, Tween, tween, Enum, ParticleSystem2D, math } from 'cc';
 import { Item } from './Item';
+import { ItemType } from './ItemType';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 import { PhaseManager } from '../../Managers/PhaseManager';
@@ -50,6 +51,9 @@ export class Sink extends Item {
     @property({ tooltip: 'Runtime: is basin currently full of water. Set from Start Mode on start.' })
     public isWaterIn: boolean = false;
 
+    @property({ tooltip: 'Runtime: the basin is occupied (a Basket is in it), so nothing else can be dropped in.' })
+    public isLocked: boolean = false;
+
     @property(Node)
     public waterSplashPos: Node = null!;
 
@@ -96,6 +100,9 @@ export class Sink extends Item {
 
     public inWaterItems: any[] = [];
 
+    /** ItemType restored when the sink is unlocked (the one set in the Inspector, normally Sink). */
+    private sinkItemType: ItemType = ItemType.Sink;
+
     private desiredWaterOn: boolean = false;
     private displayedWaterOn: boolean = false;
     private initialized: boolean = false;
@@ -112,6 +119,15 @@ export class Sink extends Item {
 
     public get WaterState(): SinkWaterState {
         return this.waterState;
+    }
+
+    /** The type this sink reports while it accepts drops. */
+    public get UnlockedItemType(): ItemType {
+        return this.sinkItemType;
+    }
+
+    public get IsLocked(): boolean {
+        return this.isLocked;
     }
 
     public get IsWaterTransitioning(): boolean {
@@ -141,7 +157,28 @@ export class Sink extends Item {
 
     protected onLoad() {
         super.onLoad();
+        if (this.itemType !== ItemType.None) this.sinkItemType = this.itemType;
+        this.SetLocked(this.isLocked);
         this.cacheWaterTransform(true);
+    }
+
+    /**
+     * Blocks or allows drops into the basin. Like CuttingBoard / Plate, an
+     * occupied sink reports ItemType.None so no drag can land in it and the
+     * hand tutorial stops pointing at it.
+     */
+    public SetLocked(isLocked: boolean): void {
+        this.isLocked = isLocked;
+        this.itemType = isLocked ? ItemType.None : this.sinkItemType;
+    }
+
+    /** Inspector-friendly wrappers. */
+    public LockSink(): void {
+        this.SetLocked(true);
+    }
+
+    public UnlockSink(): void {
+        this.SetLocked(false);
     }
 
     protected start() {
