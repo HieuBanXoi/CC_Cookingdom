@@ -13,6 +13,12 @@ export class TrashBin extends Item {
     @property({ type: Node, tooltip: 'Where a thrown trash flies to. Defaults to this node.' })
     public dropPoint: Node | null = null;
 
+    @property({ type: Node, tooltip: 'Node that slides when trash is dragged. Defaults to this TrashBin node.' })
+    public movingNode: Node | null = null;
+
+    @property({ type: Node, tooltip: 'Optional offset node. Its local position is added to the moving node default position while shown.' })
+    public showOffsetNode: Node | null = null;
+
     @property({ type: Vec3, tooltip: 'Local position while hidden (off screen). Cached from the scene position on load if left at zero.' })
     public hiddenPosition = new Vec3(0, 0, 0);
 
@@ -27,6 +33,20 @@ export class TrashBin extends Item {
 
     private activeDrags = 0;
     private isShown = false;
+    private defaultMovingPosition = new Vec3();
+
+    private get NodeToMove(): Node {
+        return this.movingNode ?? this.node;
+    }
+
+    private get ShowPosition(): Vec3 {
+        const offset = this.showOffsetNode?.position ?? this.showOffset;
+        return new Vec3(
+            this.defaultMovingPosition.x + offset.x,
+            this.defaultMovingPosition.y + offset.y,
+            this.defaultMovingPosition.z + offset.z,
+        );
+    }
 
     public get IsShown(): boolean {
         return this.isShown;
@@ -38,20 +58,20 @@ export class TrashBin extends Item {
 
     /** World position of the bin while shown (the hand tutorial must not point below the screen). */
     public GetShownWorldPosition(): Vec3 {
-        const local = new Vec3(
-            this.hiddenPosition.x + this.showOffset.x,
-            this.hiddenPosition.y + this.showOffset.y,
-            this.hiddenPosition.z + this.showOffset.z,
-        );
-        const parent = this.node.parent;
-        return parent ? Vec3.transformMat4(new Vec3(), local, parent.worldMatrix) : local;
+        const movingNode = this.NodeToMove;
+        const parent = movingNode.parent;
+        return parent
+            ? Vec3.transformMat4(new Vec3(), this.ShowPosition, parent.worldMatrix)
+            : this.ShowPosition.clone();
     }
 
     protected onLoad(): void {
         super.onLoad();
         if (this.itemType === ItemType.None) this.itemType = ItemType.TrashBin;
         if (this.hiddenPosition.equals(Vec3.ZERO)) Vec3.copy(this.hiddenPosition, this.node.position);
-        this.node.setPosition(this.hiddenPosition);
+        const movingNode = this.NodeToMove;
+        Vec3.copy(this.defaultMovingPosition, movingNode.position);
+        movingNode.setPosition(this.defaultMovingPosition);
         if (this.deactivateWhenHidden) this.node.active = false;
     }
 
@@ -62,13 +82,10 @@ export class TrashBin extends Item {
         this.isShown = true;
         this.node.active = true;
 
-        const target = new Vec3(
-            this.hiddenPosition.x + this.showOffset.x,
-            this.hiddenPosition.y + this.showOffset.y,
-            this.hiddenPosition.z + this.showOffset.z,
-        );
-        Tween.stopAllByTarget(this.node);
-        tween(this.node).to(this.moveDuration, { position: target }, { easing: 'backOut' }).start();
+        const movingNode = this.NodeToMove;
+        const target = this.ShowPosition;
+        Tween.stopAllByTarget(movingNode);
+        tween(movingNode).to(this.moveDuration, { position: target }, { easing: 'backOut' }).start();
     }
 
     /** Called by Trash after the drag ended (fail) or the throw-in move finished. */
@@ -77,9 +94,10 @@ export class TrashBin extends Item {
         if (this.activeDrags > 0 || !this.isShown) return;
         this.isShown = false;
 
-        Tween.stopAllByTarget(this.node);
-        tween(this.node)
-            .to(this.moveDuration, { position: this.hiddenPosition.clone() }, { easing: 'sineIn' })
+        const movingNode = this.NodeToMove;
+        Tween.stopAllByTarget(movingNode);
+        tween(movingNode)
+            .to(this.moveDuration, { position: this.defaultMovingPosition.clone() }, { easing: 'sineIn' })
             .call(() => { if (this.deactivateWhenHidden && !this.isShown) this.node.active = false; })
             .start();
     }

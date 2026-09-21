@@ -56,6 +56,9 @@ export class Item extends Ply_GameUnit {
     @property({ type: Ply_Event, tooltip: 'Knife in event' })
     public onKnifeIn: Ply_Event = new Ply_Event();
 
+    @property({ type: Ply_Event, tooltip: 'Raised by PaperOn(): a dragged Paper swept over this item.' })
+    public onPaperOn: Ply_Event = new Ply_Event();
+
     @property(Node)
     public knifePos: Node = null!;
 
@@ -271,6 +274,14 @@ export class Item extends Ply_GameUnit {
     public KnifeIn() {
         console.log(`[Item] KnifeIn called on item "${this.node.name}"`);
         this.onKnifeIn.invoke();
+    }
+
+    /**
+     * A Paper being dragged swept over this item. Called by Paper once per
+     * target (see Paper.retriggerOnReenter) while the drag is in progress.
+     */
+    public PaperOn(): void {
+        this.onPaperOn.invoke();
     }
 
     /** Stores the knife that targets this item. Called by Knife.SetTarget(). */

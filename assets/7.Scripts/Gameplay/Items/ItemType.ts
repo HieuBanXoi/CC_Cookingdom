@@ -11,9 +11,10 @@ export enum ItemType {
     FoodOnCuttingBoard,
     Pan,
     PanBoiling,
-    Tray, BowlClam, PlateTomato,
-    PlateGarlic, PlateOnion, PlateOlives,
     TrashBin,
+    Paper,
+    PaperBox,
+    FoodWet,
 
 }
 Enum(ItemType);

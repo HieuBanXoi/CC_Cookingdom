@@ -13,6 +13,7 @@ import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 import { World } from '../../Managers/World';
 import { PoolType } from '../../Core/Pool/PoolMember';
 import { WaterSplash } from '../Effects/WaterSplash';
+import { Trash, ITrashOwner } from './Trash';
 
 const { ccclass, property } = _decorator;
 
@@ -24,7 +25,7 @@ export enum InWaterMoveDestination {
 Enum(InWaterMoveDestination);
 
 @ccclass('InWaterItem')
-export class InWaterItem extends Item {
+export class InWaterItem extends Item implements ITrashOwner {
 
     @property({ type: Node, tooltip: 'Water position / anchor target' })
     public waterTarget: Node = null!;
@@ -38,8 +39,8 @@ export class InWaterItem extends Item {
     @property({ type: [Node], tooltip: 'Child objects attached to this item' })
     public childObject: Node[] = [];
 
-    @property({ type: [Node], tooltip: 'Trash / waste objects attached to this item' })
-    public trashObj: Node[] = [];
+    @property({ type: [Trash], tooltip: 'Trash attached to this item. Locked until CanTrashDrag(); the board is released only once all are cleared.' })
+    public trashObj: Trash[] = [];
 
     // --- DRAG FROM WATER ---
     @property({ type: Node, tooltip: 'Water ripple / splash effect node on drag' })
@@ -295,8 +296,7 @@ export class InWaterItem extends Item {
         this.StopBobEffect(false);
 
         if (!this.jumpToPlateAfterCutDone) {
-            const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
-            cuttingBoard?.IsFoodOn(false);
+            this.TryReleaseCuttingBoard();
             return;
         }
 
@@ -421,8 +421,7 @@ export class InWaterItem extends Item {
         this.sink?.UnregisterInWaterItem(this);
         HandTutManager.Ins?.UnregisterItemInWater(this);
 
-        const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
-        cuttingBoard?.IsFoodOn(false);
+        this.TryReleaseCuttingBoard();
 
         this.isInWater = false;
         this.isOnCuttingBoard = false;
@@ -467,6 +466,13 @@ export class InWaterItem extends Item {
 
         this.initialized = true;
         Vec3.copy(this.waterDragOriginalScale, this.node.scale);
+
+        // Trash starts locked; CanTrashDrag() unlocks it later.
+        for (const trash of this.trashObj) {
+            if (!trash) continue;
+            trash.owner = this;
+            if (!trash.IsCleared) trash.DisableDrag();
+        }
 
         this.SubscribeMovementEvents();
         this.ConfigureNextTarget();
@@ -718,15 +724,32 @@ export class InWaterItem extends Item {
         Ply_SoundManager.Ins?.PlayFx(FxType.KnifePlace);
     }
 
+    /** Unlocks every attached Trash so the player can throw it into the TrashBin. */
     public CanTrashDrag(): void {
-        if (this.trashObj && this.trashObj.length > 0) {
-            for (let i = 0; i < this.trashObj.length; i++) {
-                const trash = this.trashObj[i];
-                if (trash && trash.isValid) {
-                    trash.active = true;
-                }
-            }
+        for (const trash of this.trashObj) {
+            if (!trash?.isValid) continue;
+            trash.owner = this;
+            trash.EnableDrag();
         }
+    }
+
+    public IsAllTrashCleared(): boolean {
+        for (const trash of this.trashObj) {
+            if (trash?.isValid && !trash.IsCleared) return false;
+        }
+        return true;
+    }
+
+    /** ITrashOwner: a trash landed in the bin. */
+    public OnTrashCleared(_trash: Trash): void {
+        this.TryReleaseCuttingBoard();
+    }
+
+    /** The board is handed back to the next food only when this item is cut AND all its trash is gone. */
+    protected TryReleaseCuttingBoard(): void {
+        if (!this.isCutDone || !this.IsAllTrashCleared()) return;
+        const cuttingBoard = this.GetTargetItem(this.cuttingBoardTarget) as CuttingBoard | null;
+        cuttingBoard?.IsFoodOn(false);
     }
 
     /** Kept for existing scene bindings. The knife reference now lives on Item. */
