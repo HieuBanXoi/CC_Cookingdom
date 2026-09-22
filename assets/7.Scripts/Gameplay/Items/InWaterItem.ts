@@ -709,20 +709,11 @@ export class InWaterItem extends Item implements ITrashOwner {
     }
 
     public EnableKnife(): void {
-        const tutManager = HandTutManager.Ins as any;
-        if (tutManager && tutManager.knife) {
-            tutManager.knife.active = true;
-        }
+        this.knife.active = true;
         Ply_SoundManager.Ins?.PlayFx(FxType.KnifePlace);
     }
 
-    public EnableKnife2(): void {
-        const tutManager = HandTutManager.Ins as any;
-        if (tutManager && tutManager.knife2) {
-            tutManager.knife2.active = true;
-        }
-        Ply_SoundManager.Ins?.PlayFx(FxType.KnifePlace);
-    }
+    
 
     /** Unlocks every attached Trash so the player can throw it into the TrashBin. */
     public CanTrashDrag(): void {
