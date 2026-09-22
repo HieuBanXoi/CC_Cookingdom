@@ -130,6 +130,14 @@ export class Sink extends Item {
         return this.isLocked;
     }
 
+    /** True while at least one InWaterItem (fish, squid...) is registered in the basin. */
+    public get HasItemsInWater(): boolean {
+        for (const item of this.inWaterItems) {
+            if (item?.node?.isValid) return true;
+        }
+        return false;
+    }
+
     public get IsWaterTransitioning(): boolean {
         return this.waterState === SinkWaterState.Rising || this.waterState === SinkWaterState.Falling;
     }

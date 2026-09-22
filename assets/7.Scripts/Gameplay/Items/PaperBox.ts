@@ -1,5 +1,5 @@
-import { _decorator, Enum, instantiate, Node, Prefab } from 'cc';
-import { Item } from './Item';
+import { _decorator, director, Enum, instantiate, Node, Prefab } from 'cc';
+import { HandTutHint, Item } from './Item';
 import { ItemType } from './ItemType';
 import { Paper } from './Paper';
 import { TrashBin } from './TrashBin';
@@ -49,10 +49,16 @@ export class PaperBox extends Item {
     @property({ min: 0, tooltip: 'Maximum number of papers out of the box at the same time. 0 = unlimited.' })
     public maxActivePapers = 0;
 
+    @property({ tooltip: 'Hand tutorial: only guide to this box while an item of the wipe type is waiting (a wet fish on the board). The hint drags from the box (or a clean paper already out) to that item.' })
+    public handTutOnlyWithWipeTarget = true;
+
     @property({ type: Ply_Event, tooltip: 'Triggered after a paper has been taken out of the box.' })
     public onPaperSpawned: Ply_Event = new Ply_Event();
 
     private readonly activePapers: Paper[] = [];
+    // HandTutManager asks several times per idle frame; scan the scene once per frame.
+    private wipeTargetCacheFrame = -1;
+    private wipeTargetCache: Item | null = null;
 
     private readonly onClick = (): void => { this.SpawnPaper(); };
 
@@ -153,5 +159,70 @@ export class PaperBox extends Item {
     public get ActivePaperCount(): number {
         this.PurgeFinishedPapers();
         return this.activePapers.length;
+    }
+
+    // =========================================================
+    // HAND TUTORIAL
+    // =========================================================
+
+    /** Type the spawned papers wipe (the Inspector value, else the Paper default FoodWet). */
+    private get WipeTargetType(): ItemType {
+        return this.paperWipeTargetType !== ItemType.None ? this.paperWipeTargetType : ItemType.FoodWet;
+    }
+
+    /** First active item of the wipe type in the scene (the wet food waiting on the board). */
+    public FindWipeTarget(): Item | null {
+        const frame = director.getTotalFrames();
+        if (frame === this.wipeTargetCacheFrame) return this.wipeTargetCache?.isValid ? this.wipeTargetCache : null;
+        this.wipeTargetCacheFrame = frame;
+        this.wipeTargetCache = null;
+
+        const type = this.WipeTargetType;
+        const scene = this.node.scene;
+        if (!scene) return null;
+
+        const items = scene.getComponentsInChildren('Item') as Item[];
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (!item || item.node === this.node || !item.node.activeInHierarchy) continue;
+            if (item.itemType === type) {
+                this.wipeTargetCache = item;
+                break;
+            }
+        }
+        return this.wipeTargetCache;
+    }
+
+    /** A paper already out of the box that has not wiped anything yet. */
+    private FindCleanActivePaper(): Paper | null {
+        this.PurgeFinishedPapers();
+        for (const paper of this.activePapers) {
+            if (!paper?.isValid || !paper.node.activeInHierarchy || paper.IsWet) continue;
+            if (!paper.itemDraggable?.enabled || !paper.itemDraggable.CanDrag()) continue;
+            return paper;
+        }
+        return null;
+    }
+
+    public override CanShowHandTut(): boolean {
+        if (!this.handTutOnlyWithWipeTarget) return true;
+        return this.FindWipeTarget() !== null;
+    }
+
+    /** The box hint is about the food that needs wiping. */
+    public override GetHandTutRelatedItem(): Item | null {
+        return this.FindWipeTarget();
+    }
+
+    /** Drag from the box (or the clean paper already out) onto the wet food. */
+    public override GetHandTutHint(): HandTutHint | null {
+        const target = this.FindWipeTarget();
+        if (!target) return null;
+
+        const paper = this.FindCleanActivePaper();
+        if (!paper && (!this.itemClickable?.enabled || !this.itemClickable.canClick)) return null;
+
+        const from = paper ? paper.node : (this.spawnPoint ?? this.node);
+        return { kind: 'drag', from: from.worldPosition.clone(), to: target.node.worldPosition.clone() };
     }
 }

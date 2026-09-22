@@ -1,6 +1,8 @@
 import { _decorator, Node, Tween, tween, UIOpacity, Vec3 } from 'cc';
 import { CuttingItem } from './CuttingItem';
+import { ItemType } from './ItemType';
 import { Knife } from './Knife';
+import { ItemToTarget } from './ItemToTarget';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
 import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 
@@ -10,6 +12,9 @@ const { ccclass, property } = _decorator;
  * Onion: dragged onto the cutting board, then tapped. Each tap punches the
  * onion and drops one leaf (falls + fades). After the last leaf the knife
  * may be dropped on it.
+ *
+ * It also owns a Thread (ItemToTarget): SetThreadTarget() points the thread's
+ * drag / move target at this onion, the way SetKnifeTarget() does for the knife.
  */
 @ccclass('Onion')
 export class Onion extends CuttingItem {
@@ -33,6 +38,12 @@ export class Onion extends CuttingItem {
 
     @property({ tooltip: 'Random extra X spread for each falling leaf.' })
     public leafDriftX = 30;
+
+    @property({ type: ItemToTarget, tooltip: 'Thread tied around the onion. SetThreadTarget() makes this onion its drop target.' })
+    public thread: ItemToTarget | null = null;
+
+    @property({ type: Node, tooltip: 'Where the thread lands on the onion. Empty = this node.' })
+    public threadPoint: Node | null = null;
 
     private clickCount = 0;
     private isPeeled = false;
@@ -96,6 +107,39 @@ export class Onion extends CuttingItem {
             return;
         }
         ComponentCache.get(this.knife, Knife)?.SetTarget(this.node);
+    }
+
+    /**
+     * Lets the assigned thread be dropped on this onion: its ItemDraggable
+     * accepts this onion's ItemType and its ItemToTarget flies to threadPoint.
+     * Bindable from a Ply_Event (for example after the cut is done).
+     */
+    public SetThreadTarget(): void {
+        if (!this.thread?.isValid) {
+            console.warn(`[Onion] Assign Onion.thread on "${this.node.name}" to enable the thread.`);
+            return;
+        }
+
+        this.thread.cacheComponents();
+        if (!this.thread.itemDraggable || !this.thread.itemMoveToTarget) {
+            console.warn(`[Onion] Thread "${this.thread.node.name}" needs ItemDraggable + ItemMoveToTarget.`);
+            return;
+        }
+
+        const landingPoint = this.threadPoint?.isValid ? this.threadPoint : this.node;
+        this.thread.targetItem = this;
+        this.thread.targetPosition = landingPoint;
+        // Drop test uses this onion's type; the hand tutorial drags towards the landing point.
+        this.thread.itemDraggable.targetItemType = this.itemType;
+        this.thread.itemMoveToTarget.defaultTarget = landingPoint;
+        this.thread.EnableItemDraggable();
+    }
+
+    /** Stops the thread from targeting this onion (bindable). */
+    public ClearThreadTarget(): void {
+        if (!this.thread?.isValid) return;
+        if (this.thread.itemDraggable) this.thread.itemDraggable.targetItemType = ItemType.None;
+        if (this.thread.itemMoveToTarget) this.thread.itemMoveToTarget.defaultTarget = null!;
     }
 
     private DropLeaf(index: number): void {

@@ -8,6 +8,7 @@ import { Ply_TimerEvent } from '../../Core/Base/Ply_TimerEvent';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { ComponentCache } from '../../Core/Base/CacheComponent';
 import { HandTutManager } from '../../Managers/HandTutManager';
+import { InputManager } from '../../Managers/InputManager';
 import { PhaseManager } from '../../Managers/PhaseManager';
 import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 import { World } from '../../Managers/World';
@@ -49,11 +50,14 @@ export class InWaterItem extends Item implements ITrashOwner {
     @property({ tooltip: 'Scale item when dragged out of water' })
     public scaleOnDragFromWater: boolean = true;
 
-    @property({ tooltip: 'Target scale when dragging from water' })
+    @property({ tooltip: 'Scale while carried out of the water, relative to the scale the item had at start (1,1,1 = unchanged). Applied in world space, so the draggingNode scale does not shrink it.' })
     public dragFromWaterScale: Vec3 = new Vec3(1, 1, 1);
 
     @property({ min: 0, tooltip: 'Scale transition duration in seconds' })
     public dragFromWaterScaleDuration: number = 0.2;
+
+    @property({ tooltip: 'On the cutting board the item goes back to the world scale it had before the player picked it up (its resting size), whatever the board / draggingNode scale is.' })
+    public keepOriginalScaleOnCuttingBoard: boolean = true;
 
     // --- BOB EFFECT (Integrated directly into InWaterItem) ---
     @property({ tooltip: 'Enable water bobbing effect' })
@@ -100,6 +104,9 @@ export class InWaterItem extends Item implements ITrashOwner {
     @property({ tooltip: 'Automatically jump to plate after cutting is done' })
     public jumpToPlateAfterCutDone: boolean = true;
 
+    @property({ tooltip: 'Hand tutorial: the first InWaterItem to reach the cutting board registers itself as the no-delay item (HandTutManager.RegisterInWaterItemOnBoard).' })
+    public registerNoDelayOnCuttingBoard: boolean = true;
+
     @property({ type: Node, tooltip: 'Food shadow on plate' })
     public plateFoodShadow: Node | null = null;
 
@@ -115,18 +122,36 @@ export class InWaterItem extends Item implements ITrashOwner {
 
     protected isMoving: boolean = false;
     private initialized: boolean = false;
+    private plateStepCounted: boolean = false;
     private moveDestination: InWaterMoveDestination = InWaterMoveDestination.Water;
     private waterDragOriginalScale: Vec3 = new Vec3(1, 1, 1);
+    /**
+     * World scale the item had right before the player picked it up (the size
+     * it shows at rest). Carry scale and the board scale derive from it, so
+     * the item never ends up smaller than it looked a moment ago.
+     */
+    private readonly carryBaseWorldScale: Vec3 = new Vec3(1, 1, 1);
     private wasInWaterOnDrag: boolean = false;
     private readonly handleBeginDragInWater = (): void => this.OnBeginDragInWater();
     private readonly handleDropSuccessInWater = (target?: Node): void => {
         this.OnDropSuccessInWater();
         this.OnDropSuccessMovement(target || null);
     };
+    private readonly handleReturnToStartInWater = (): void => this.OnReturnedFromDrag();
 
     // Bob effect internal variables
     private startBobLocalPos: Vec3 = new Vec3(0, 0, 0);
     private bobTween: Tween<Node> | null = null;
+    /** Parent the bob start position was cached under; a reset under another parent would teleport the item. */
+    private bobParent: Node | null = null;
+
+    // Resting pose in the water. The bob always restarts from here, so taps
+    // that stop it mid-cycle cannot make the item drift.
+    private readonly waterRestLocalPos: Vec3 = new Vec3();
+    private readonly waterRestLocalScale: Vec3 = new Vec3(1, 1, 1);
+    private readonly waterRestWorldScale: Vec3 = new Vec3(1, 1, 1);
+    private waterRestParent: Node | null = null;
+    private hasWaterRest: boolean = false;
 
     public get IsBobPlaying(): boolean {
         return this.bobTween !== null;
@@ -161,6 +186,10 @@ export class InWaterItem extends Item implements ITrashOwner {
     protected update(dt: number): void {
         if (this.isMoving) return;
 
+        // The board / plate can free up (or get taken) after this item picked
+        // its drop type, so keep the type in sync with the target's current one.
+        this.RefreshNextTargetType();
+
         // Do not update target position if dragging or returning to start
         if (this.itemDraggable && (this.itemDraggable.IsDragging || this.itemDraggable.IsReturningToStart)) {
             return;
@@ -178,11 +207,28 @@ export class InWaterItem extends Item implements ITrashOwner {
     // =========================================================
 
     public CacheBobStartPosition(): void {
-        Vec3.copy(this.startBobLocalPos, this.node.position);
+        if (this.isInWater && this.hasWaterRest && this.node.parent === this.waterRestParent) {
+            Vec3.copy(this.startBobLocalPos, this.waterRestLocalPos);
+        } else {
+            Vec3.copy(this.startBobLocalPos, this.node.position);
+        }
+        this.bobParent = this.node.parent;
+    }
+
+    /** True while a drag / return / move owns the item's transform. */
+    private IsTransformBusy(): boolean {
+        if (this.isMoving) return true;
+        if (this.itemDraggable && (this.itemDraggable.IsDragging || this.itemDraggable.IsReturningToStart)) return true;
+        const draggingNode = InputManager.Ins?.draggingNode;
+        return !!draggingNode && this.node.parent === draggingNode;
     }
 
     public PlayBobEffect(): void {
         if (!this.enableBobEffect) return;
+        // A tap or a drag owns the transform (the item sits under draggingNode):
+        // bobbing now would cache a wrong start position. The return-to-start
+        // handler restarts the bob once the item is back in the water.
+        if (this.IsTransformBusy()) return;
 
         this.StopBobEffect(false);
         this.CacheBobStartPosition();
@@ -209,7 +255,9 @@ export class InWaterItem extends Item implements ITrashOwner {
             this.bobTween = null;
         }
 
-        if (resetPosition && this.node && this.node.isValid) {
+        // The cached position is local to bobParent; under another parent
+        // (draggingNode while tapped) it would send the item somewhere else.
+        if (resetPosition && this.node && this.node.isValid && this.node.parent === this.bobParent) {
             this.node.setPosition(this.startBobLocalPos);
         }
     }
@@ -255,6 +303,16 @@ export class InWaterItem extends Item implements ITrashOwner {
 
     public override OnDragFailReturnComplete(): void {
         super.OnDragFailReturnComplete();
+        this.OnReturnedFromDrag();
+    }
+
+    /**
+     * The item is back where the drag started (ItemDraggable.onReturnToStartComplete,
+     * fired for every failed drop, with or without a break heart). Only now the
+     * water drag state is undone and the bob restarts.
+     */
+    private OnReturnedFromDrag(): void {
+        if (!this.wasInWaterOnDrag) return;
         this.ResetWaterDragState(true);
         if (this.ShouldPlayBobEffectAfterReturn()) {
             this.PlayBobEffect();
@@ -346,6 +404,8 @@ export class InWaterItem extends Item implements ITrashOwner {
         this.isOnPlate = false;
         this.onProcess = true;
 
+        this.CacheWaterRestPose();
+
         if (this.sink) {
             this.sink.RegisterInWaterItem(this);
             HandTutManager.Ins?.RegisterItemInWater(this);
@@ -394,6 +454,8 @@ export class InWaterItem extends Item implements ITrashOwner {
         this.isOnPlate = false;
         this.onProcess = true;
         this.itemType = ItemType.FoodOnCuttingBoard;
+
+        if (this.registerNoDelayOnCuttingBoard) HandTutManager.Ins?.RegisterInWaterItemOnBoard(this);
 
         // On the board the food is often locked while it waits (for the knife,
         // for a tween...). Taps on it then are not mistakes: no break heart.
@@ -450,6 +512,9 @@ export class InWaterItem extends Item implements ITrashOwner {
         }
 
         this.SpawnHeart();
+
+        // Landing on the plate completes the step once its trash is gone too.
+        this.TryCountPlateStep();
     }
 
     // =========================================================
@@ -466,6 +531,11 @@ export class InWaterItem extends Item implements ITrashOwner {
 
         this.initialized = true;
         Vec3.copy(this.waterDragOriginalScale, this.node.scale);
+        Vec3.copy(this.carryBaseWorldScale, this.node.worldScale);
+
+        // The board / plate report ItemType.None while another food sits on
+        // them, so the hand tutorial must not point there until the type matches.
+        this.requireMatchingTargetTypeForHandTut = true;
 
         // Trash starts locked; CanTrashDrag() unlocks it later.
         for (const trash of this.trashObj) {
@@ -483,9 +553,11 @@ export class InWaterItem extends Item implements ITrashOwner {
         if (this.itemDraggable) {
             this.itemDraggable.onBeginDrag.removeListener(this.handleBeginDragInWater);
             this.itemDraggable.onDropSuccess.removeListener(this.handleDropSuccessInWater);
+            this.itemDraggable.onReturnToStartComplete.removeListener(this.handleReturnToStartInWater);
 
             this.itemDraggable.onBeginDrag.addListener(this.handleBeginDragInWater);
             this.itemDraggable.onDropSuccess.addListener(this.handleDropSuccessInWater);
+            this.itemDraggable.onReturnToStartComplete.addListener(this.handleReturnToStartInWater);
         }
 
         if (this.itemMoveToTarget) {
@@ -498,6 +570,7 @@ export class InWaterItem extends Item implements ITrashOwner {
         if (this.itemDraggable) {
             this.itemDraggable.onBeginDrag.removeListener(this.handleBeginDragInWater);
             this.itemDraggable.onDropSuccess.removeListener(this.handleDropSuccessInWater);
+            this.itemDraggable.onReturnToStartComplete.removeListener(this.handleReturnToStartInWater);
         }
 
         if (this.itemMoveToTarget) {
@@ -537,15 +610,47 @@ export class InWaterItem extends Item implements ITrashOwner {
         // cached local bob position would cause a visible drag offset.
         this.StopBobEffect(false);
 
+        // Every drag starts from the resting scale. A tap spammed while the
+        // previous restore tween is still running would otherwise hand this
+        // tween (and ItemDraggable's cache) an inflated scale to grow from.
+        if (this.hasWaterRest) {
+            this.node.setWorldScale(this.waterRestWorldScale);
+        }
         Vec3.copy(this.waterDragOriginalScale, this.node.scale);
+        // ItemDraggable already put the item back at its resting world scale.
+        Vec3.copy(this.carryBaseWorldScale, this.node.worldScale);
 
         if (this.scaleOnDragFromWater) {
+            // Local target under the current parent (draggingNode), with the
+            // same lift ItemDraggable gives every dragged item.
+            const lift = this.itemDraggable?.dragScaleMultiplier ?? 1;
+            const target = this.WorldToLocalScale(this.GetDragFromWaterWorldScale()).multiplyScalar(lift);
             tween(this.node)
-                .to(this.dragFromWaterScaleDuration, { scale: this.dragFromWaterScale }, { easing: 'sineOut' })
+                .to(this.dragFromWaterScaleDuration, { scale: target }, { easing: 'sineOut' })
                 .start();
         }
 
         this.SetWaterFxActive(true);
+    }
+
+    /** World scale the item shows while carried out of the water. */
+    private GetDragFromWaterWorldScale(): Vec3 {
+        return new Vec3(
+            this.carryBaseWorldScale.x * this.dragFromWaterScale.x,
+            this.carryBaseWorldScale.y * this.dragFromWaterScale.y,
+            this.carryBaseWorldScale.z * this.dragFromWaterScale.z,
+        );
+    }
+
+    /** Local scale under the current parent that shows the given world scale. */
+    private WorldToLocalScale(worldScale: Vec3): Vec3 {
+        const parentScale = this.node.parent?.worldScale;
+        if (!parentScale) return worldScale.clone();
+        return new Vec3(
+            parentScale.x ? worldScale.x / parentScale.x : worldScale.x,
+            parentScale.y ? worldScale.y / parentScale.y : worldScale.y,
+            parentScale.z ? worldScale.z / parentScale.z : worldScale.z,
+        );
     }
 
     private OnDropSuccessInWater(): void {
@@ -567,15 +672,41 @@ export class InWaterItem extends Item implements ITrashOwner {
         }
 
         if (restoreScale) {
-            tween(this.node)
-                .to(this.dragFromWaterScaleDuration, { scale: this.waterDragOriginalScale }, { easing: 'sineOut' })
-                .start();
+            this.RestoreWaterRestScale();
         } else {
-            this.node.setScale(this.dragFromWaterScale);
+            // Dropped on a target: fly there at the carry scale (world space).
+            Tween.stopAllByTarget(this.node);
+            this.node.setWorldScale(this.GetDragFromWaterWorldScale());
         }
 
         this.SetWaterFxActive(false);
         this.wasInWaterOnDrag = false;
+    }
+
+    /**
+     * Back in the water after a failed drop. waterDragOriginalScale was read
+     * under draggingNode, so as a local scale under the water parent it is
+     * wrong whenever the two parents are scaled differently: restore the
+     * cached resting scale instead.
+     */
+    private RestoreWaterRestScale(): void {
+        Tween.stopAllByTarget(this.node);
+
+        if (!this.hasWaterRest) {
+            tween(this.node)
+                .to(this.dragFromWaterScaleDuration, { scale: this.waterDragOriginalScale }, { easing: 'sineOut' })
+                .start();
+            return;
+        }
+
+        if (this.node.parent !== this.waterRestParent) {
+            this.node.setWorldScale(this.waterRestWorldScale);
+            return;
+        }
+
+        tween(this.node)
+            .to(this.dragFromWaterScaleDuration, { scale: this.waterRestLocalScale }, { easing: 'sineOut' })
+            .start();
     }
 
     private SetWaterFxActive(isActive: boolean): void {
@@ -584,9 +715,14 @@ export class InWaterItem extends Item implements ITrashOwner {
         }
     }
 
+    /** Called on arrival on the board: the drag / fly scales are over, show the item at its real size. */
     private ApplyDragFromWaterScale(): void {
+        if (this.keepOriginalScaleOnCuttingBoard) {
+            this.node.setWorldScale(this.carryBaseWorldScale);
+            return;
+        }
         if (this.scaleOnDragFromWater) {
-            this.node.setScale(this.dragFromWaterScale);
+            this.node.setWorldScale(this.GetDragFromWaterWorldScale());
         }
     }
 
@@ -626,6 +762,43 @@ export class InWaterItem extends Item implements ITrashOwner {
             this.itemDraggable.returnTransform = this.cuttingBoardTarget;
         } else if (this.isInWater) {
             this.itemDraggable.returnTransform = this.waterTarget;
+        }
+    }
+
+    /**
+     * Pins the item to its water anchor and remembers that pose. Skipped while
+     * the item is being dragged (MoveToWater bound from an event mid-tap).
+     */
+    private CacheWaterRestPose(): void {
+        if (this.IsTransformBusy()) return;
+
+        Tween.stopAllByTarget(this.node);
+        if (this.waterTarget?.isValid) {
+            this.node.setWorldPosition(this.waterTarget.worldPosition);
+        }
+        this.waterRestParent = this.node.parent;
+        Vec3.copy(this.waterRestLocalPos, this.node.position);
+        Vec3.copy(this.waterRestLocalScale, this.node.scale);
+        Vec3.copy(this.waterRestWorldScale, this.node.worldScale);
+        this.hasWaterRest = true;
+    }
+
+    /**
+     * The drop type is copied from the target when the item becomes ready
+     * (SetClean / CutDone). If the board or plate was busy then (another food
+     * on it -> ItemType.None) the item could never be dropped there once it
+     * frees up, so re-read the target's type while the item waits.
+     */
+    private RefreshNextTargetType(): void {
+        if (!this.itemDraggable || !this.isClean) return;
+
+        const waitingForBoard = this.isInWater && !this.isCutDone;
+        const waitingForPlate = this.isOnCuttingBoard && this.isCutDone;
+        if (!waitingForBoard && !waitingForPlate) return;
+
+        const targetItem = this.GetTargetItem(waitingForBoard ? this.cuttingBoardTarget : this.plateTarget);
+        if (targetItem && this.itemDraggable.targetItemType !== targetItem.itemType) {
+            this.itemDraggable.targetItemType = targetItem.itemType;
         }
     }
 
@@ -734,6 +907,17 @@ export class InWaterItem extends Item implements ITrashOwner {
     /** ITrashOwner: a trash landed in the bin. */
     public OnTrashCleared(_trash: Trash): void {
         this.TryReleaseCuttingBoard();
+        this.TryCountPlateStep();
+    }
+
+    /**
+     * One gameplay step = the food is on its plate AND every trash it shed is
+     * in the bin, whichever of the two happens last. Counted once.
+     */
+    protected TryCountPlateStep(): void {
+        if (this.plateStepCounted || !this.isOnPlate || !this.IsAllTrashCleared()) return;
+        this.plateStepCounted = true;
+        this.DoOneStep();
     }
 
     /** The board is handed back to the next food only when this item is cut AND all its trash is gone. */

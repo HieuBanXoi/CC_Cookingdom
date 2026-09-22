@@ -94,6 +94,12 @@ export class Trash extends Item {
         this.onProcess = true;
     }
 
+    /** The trash -> bin hint belongs to the food this trash came off (no-delay follows the owner). */
+    public override GetHandTutRelatedItem(): Item | null {
+        const owner = this.owner as unknown;
+        return owner instanceof Item && owner.isValid ? owner : null;
+    }
+
     /** Drag hint towards the bin's shown position (the bin itself sits hidden below the screen). */
     public override GetHandTutHint(): HandTutHint | null {
         if (!this.isUnlocked || this.isCleared || this.isThrowing || !this.trashBin) return null;

@@ -209,6 +209,20 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         this.endScaleMultiplier = scale;
     }
 
+    /** Bindable from a Ply_Event: spin the item during a Jump move. */
+    public EnableRotate360DuringJump(): void {
+        this.rotate360DuringJump = true;
+    }
+
+    /** Bindable from a Ply_Event: no spin during a Jump move. */
+    public DisableRotate360DuringJump(): void {
+        this.rotate360DuringJump = false;
+    }
+
+    public SetRotate360DuringJump(enabled: boolean): void {
+        this.rotate360DuringJump = enabled;
+    }
+
     /** Reparent without changing the item's visible position, rotation, or scale. */
     private SetParentPreservingWorldTransform(parent: Node): void {
         if (this.node.parent === parent) return;

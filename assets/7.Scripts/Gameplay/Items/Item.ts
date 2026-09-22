@@ -480,6 +480,23 @@ export class Item extends Ply_GameUnit {
         return null;
     }
 
+    /**
+     * Override to keep this item out of the hand tutorial while its action
+     * makes no sense yet (e.g. PaperBox with nothing wet to wipe).
+     */
+    public CanShowHandTut(): boolean {
+        return true;
+    }
+
+    /**
+     * The item this item's hint is really about (PaperBox -> the wet food,
+     * Knife -> the food it cuts). HandTutManager uses it to decide whether
+     * the hint belongs to a no-delay item. Null = only this item counts.
+     */
+    public GetHandTutRelatedItem(): Item | null {
+        return null;
+    }
+
     /** HandTutManager started showing a hint for this item. */
     public OnHandTutShown(): void {}
 

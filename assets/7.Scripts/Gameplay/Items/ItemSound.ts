@@ -101,4 +101,7 @@ export class ItemSound extends Ply_EventHandlerComponent {
     public PlayDropSound() {
         this.PlaySoundFX(FxType.Drop);
     }
+    public StopWaterDropSound() {
+        Ply_SoundManager.Ins.StopFxLoop(FxType.WaterDrop);
+    }
 }

@@ -3,6 +3,10 @@ import { Item } from './Item';
 import { ItemType } from './ItemType';
 import { Sink } from './Sink';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
+import { InputManager } from '../../Managers/InputManager';
+import { GameManager } from '../../Managers/GameManager';
+import { HandTutManager } from '../../Managers/HandTutManager';
+import { CuttingItem } from './CuttingItem';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { Ply_SoundManager, FxType } from '../../Managers/Ply_SoundManager';
 import { World } from '../../Managers/World';
@@ -15,14 +19,16 @@ const { ccclass, property } = _decorator;
  * A basket of food that is washed as one piece.
  *
  * 1. Only the basket can be dragged; the food inside it is locked. It can only
- *    be dropped into a sink that already holds water.
+ *    be dropped into a sink that already holds water and has no other food in it.
  * 2. In the basin the dirt fades away and the water nodes light up. Each tap
  *    dips the basket into the water and takes one step of the water away.
- * 3. The tap after the last dip sends the basket back to where it started.
- *    The food inside becomes draggable, the basket does not.
+ * 3. The tap after the last dip lifts the basket out of the basin (rendered
+ *    on top, under InputManager.draggingNode) and jumps it back to where it
+ *    started. The food inside becomes draggable, the basket does not.
  *
  * While the basket sits in the basin the sink is locked, so no other item can
- * be dropped into it.
+ * be dropped into it, and the drag of `lockedWhileInSink` (the SinkBlock under
+ * the basin) is disabled so a tap on the basket cannot start dragging them.
  */
 @ccclass('Basket')
 export class Basket extends Item {
@@ -32,8 +38,17 @@ export class Basket extends Item {
     @property({ type: Node, tooltip: 'Landing point inside the basin. Defaults to the sink node.' })
     public waterTarget: Node | null = null;
 
+    @property({ tooltip: 'The basket can only be dropped in while no other food (InWaterItem) is in the basin.' })
+    public requireEmptySink = true;
+
     @property({ type: [Item], tooltip: 'Food inside the basket. Locked until the basket is washed and back home.' })
     public containedItems: Item[] = [];
+
+    @property({ type: [Item], tooltip: 'Items under the basin (e.g. the SinkBlock) whose drag is disabled while the basket is in the sink, so a tap on the basket cannot grab them instead.' })
+    public lockedWhileInSink: Item[] = [];
+
+    @property({ tooltip: 'Hand tutorial: this basket registers itself as a no-delay item, and so does the first contained food (containedItems[0] once the basket is home, replaced by whichever food reaches the cutting board first).' })
+    public registerNoDelayForHandTut = true;
 
     // --- DIRT / WATER VISUALS ---
     @property({ type: [Node], tooltip: 'Dirt visuals. Faded out when the basket lands in the water.' })
@@ -67,6 +82,22 @@ export class Basket extends Item {
     @property({ tooltip: 'Spawn a water splash on every dip.' })
     public spawnSplashOnDip = true;
 
+    // --- RETURN HOME ---
+    @property({ tooltip: 'How far the basket rises straight out of the water (world units) before jumping home.' })
+    public liftHeight = 80;
+
+    @property({ min: 0.01, tooltip: 'Duration of the lift out of the water.' })
+    public liftDuration = 0.25;
+
+    @property({ min: 0, tooltip: 'Arc height of the jump back home (world units).' })
+    public jumpHomePower = 120;
+
+    @property({ min: 0.01, tooltip: 'Duration of the jump back home.' })
+    public jumpHomeDuration = 0.5;
+
+    @property({ tooltip: 'Play the splash + water sound when the basket leaves the water.' })
+    public spawnSplashOnLift = true;
+
     // --- EVENTS ---
     @property({ type: Ply_Event, tooltip: 'Triggered once the basket has landed in the water.' })
     public onEnteredSink: Ply_Event = new Ply_Event();
@@ -87,9 +118,21 @@ export class Basket extends Item {
     private readonly sinkRestPosition = new Vec3();
     private readonly baseScale = new Vec3(1, 1, 1);
 
+    // Where the basket lives before it goes into the sink. Local values so a
+    // canvas resize while it is in the basin still lands it in the right spot.
+    private homeParent: Node | null = null;
+    private homeSiblingIndex = 0;
+    private readonly homeLocalPos = new Vec3();
+    private readonly homeLocalScale = new Vec3(1, 1, 1);
+    private returnHomeTween: Tween<object> | null = null;
+    /** Items of lockedWhileInSink this basket disabled itself (and so must re-enable). */
+    private readonly dragLockedItems: Item[] = [];
+    private firstFoodOnBoard: Item | null = null;
+    private readonly foodBoardListeners = new Map<CuttingItem, () => void>();
+    private static readonly NO_DELAY_GROUP_FOOD = 'basket-food';
+
     private readonly onDropSuccess = (target?: Node): void => this.OnDropSuccess(target ?? null);
     private readonly onClick = (): void => this.OnClick();
-    private readonly onReturnComplete = (): void => this.OnReturnedHome();
     private readonly onMoveComplete = (): void => this.OnArrivedInSink();
 
     public get IsInSink(): boolean {
@@ -106,14 +149,17 @@ export class Basket extends Item {
         return this.sink?.isValid ? this.sink.node : null;
     }
 
-    /** The basket may only go into a sink that already holds water and is free. */
+    /** The basket may only go into a sink that holds water, is not locked and (requireEmptySink) has no food in it. */
     public CanEnterSink(): boolean {
-        return !!this.sink?.isValid && this.sink.isWaterIn && !this.sink.IsLocked;
+        if (!this.sink?.isValid || !this.sink.isWaterIn || this.sink.IsLocked) return false;
+        if (this.requireEmptySink && this.sink.HasItemsInWater) return false;
+        return true;
     }
 
     protected onLoad(): void {
         super.onLoad();
         Vec3.copy(this.baseScale, this.node.scale);
+        this.CacheHome();
 
         // The sink reports ItemType.None while it has no water, so the hand
         // tutorial must check the target type before pointing at it.
@@ -126,13 +172,16 @@ export class Basket extends Item {
         this.RefreshDropTarget();
     }
 
+    protected start(): void {
+        if (this.registerNoDelayForHandTut) HandTutManager.Ins?.RegisterNoDelayItem(this);
+    }
+
     protected onEnable(): void {
         this.cacheComponents();
+        this.SubscribeFoodBoardEvents();
 
         this.itemDraggable?.onDropSuccess.removeListener(this.onDropSuccess);
         this.itemDraggable?.onDropSuccess.addListener(this.onDropSuccess);
-        this.itemDraggable?.onReturnToStartComplete.removeListener(this.onReturnComplete);
-        this.itemDraggable?.onReturnToStartComplete.addListener(this.onReturnComplete);
         this.itemClickable?.onClick.removeListener(this.onClick);
         this.itemClickable?.onClick.addListener(this.onClick);
         this.itemMoveToTarget?.node.off(ItemMoveToTarget.EVENT_COMPLETE, this.onMoveComplete, this);
@@ -141,9 +190,10 @@ export class Basket extends Item {
 
     protected onDisable(): void {
         this.itemDraggable?.onDropSuccess.removeListener(this.onDropSuccess);
-        this.itemDraggable?.onReturnToStartComplete.removeListener(this.onReturnComplete);
         this.itemClickable?.onClick.removeListener(this.onClick);
         this.itemMoveToTarget?.node.off(ItemMoveToTarget.EVENT_COMPLETE, this.onMoveComplete, this);
+        this.StopReturnHomeTween();
+        this.UnsubscribeFoodBoardEvents();
     }
 
     protected update(): void {
@@ -191,6 +241,7 @@ export class Basket extends Item {
         const dropPoint = this.DropPoint;
         this.isMoving = true;
         this.DisableItemDraggable();
+        this.LockItemsUnderBasket();
 
         if (!this.itemMoveToTarget || !dropPoint) {
             this.OnArrivedInSink();
@@ -287,7 +338,11 @@ export class Basket extends Item {
     // 3. BACK HOME
     // =========================================================
 
-    /** Sends the basket back to where it was before it went into the sink. */
+    /**
+     * Sends the basket back to where it was before it went into the sink:
+     * it is moved under InputManager.draggingNode (drawn above the sink),
+     * rises straight up out of the water, then jumps home in an arc.
+     */
     public ReturnHome(): void {
         if (this.isReturningHome || !this.isInSink) return;
         this.isReturningHome = true;
@@ -298,30 +353,134 @@ export class Basket extends Item {
         this.node.setPosition(this.sinkRestPosition);
         this.node.setScale(this.baseScale);
 
-        if (!this.itemDraggable) {
-            this.OnReturnedHome();
-            return;
+        const draggingNode = InputManager.Ins?.draggingNode;
+        if (draggingNode?.isValid && draggingNode.activeInHierarchy) {
+            this.SetParentPreservingWorldTransform(draggingNode);
         }
 
-        // ItemDraggable still holds the position the basket was dragged from,
-        // which is exactly "where it was before it moved into the sink".
-        this.itemDraggable.ReturnToStart(false, false);
+        if (this.itemMoveToTarget?.lockInputWhileMoving && GameManager.Ins) {
+            GameManager.Ins.isPlaying = false;
+        }
+
+        if (this.spawnSplashOnLift) {
+            Ply_SoundManager.Ins?.PlayFx(FxType.FoodToWater);
+            this.SpawnSplash();
+        }
+
+        const start = this.node.worldPosition.clone();
+        const lifted = new Vec3(start.x, start.y + this.liftHeight, start.z);
+        tween(this.node)
+            .to(this.liftDuration, { worldPosition: lifted }, { easing: 'sineOut' })
+            .call(() => this.JumpHome())
+            .start();
+    }
+
+    /** Arc from the current position to the home position (same math as ItemMoveToTarget's Jump). */
+    private JumpHome(): void {
+        const from = this.node.worldPosition.clone();
+        const to = this.GetHomeWorldPosition();
+        const jumpState = { progress: 0 };
+
+        this.StopReturnHomeTween();
+        this.returnHomeTween = tween(jumpState)
+            .to(this.jumpHomeDuration, { progress: 1 }, {
+                easing: 'sineOut',
+                onUpdate: state => {
+                    if (!this.node?.isValid) return;
+                    const progress = (state as { progress: number }).progress;
+                    const arc = Math.sin(progress * Math.PI) * this.jumpHomePower;
+                    this.node.setWorldPosition(
+                        from.x + (to.x - from.x) * progress,
+                        from.y + (to.y - from.y) * progress + arc,
+                        from.z,
+                    );
+                },
+            })
+            .call(() => {
+                this.returnHomeTween = null;
+                this.OnReturnedHome();
+            })
+            .start();
     }
 
     private OnReturnedHome(): void {
-        // onReturnToStartComplete also fires on an ordinary failed drop.
         if (!this.isReturningHome) return;
         this.isReturningHome = false;
         this.isInSink = false;
         this.onProcess = false;
 
+        this.RestoreHome();
+
+        if (this.itemMoveToTarget?.lockInputWhileMoving && GameManager.Ins) {
+            GameManager.Ins.isPlaying = true;
+        }
+
         this.sink?.SetLocked(false);
+        this.UnlockItemsUnderBasket();
         this.UnlockContainedItems();
+
+        // The first food is guided quickly. Provisionally the first in the
+        // list; the food that really reaches the board first takes over.
+        if (this.registerNoDelayForHandTut && !this.firstFoodOnBoard) {
+            HandTutManager.Ins?.RegisterNoDelayItem(this.FirstValidContainedItem(), Basket.NO_DELAY_GROUP_FOOD);
+        }
 
         this.DisableItemDraggable();
         this.DisableItemClickable();
         this.ItemDone();
         this.onReturnedHome.invoke();
+    }
+
+    // =========================================================
+    // HOME TRANSFORM
+    // =========================================================
+
+    private CacheHome(): void {
+        this.homeParent = this.node.parent;
+        this.homeSiblingIndex = this.node.getSiblingIndex();
+        Vec3.copy(this.homeLocalPos, this.node.position);
+        Vec3.copy(this.homeLocalScale, this.node.scale);
+    }
+
+    private GetHomeWorldPosition(): Vec3 {
+        if (this.homeParent?.isValid) {
+            return Vec3.transformMat4(new Vec3(), this.homeLocalPos, this.homeParent.worldMatrix);
+        }
+        return this.node.worldPosition.clone();
+    }
+
+    /** Back under the home parent, at the exact local pose it started from. */
+    private RestoreHome(): void {
+        if (!this.homeParent?.isValid) return;
+
+        if (this.node.parent !== this.homeParent) {
+            this.node.setParent(this.homeParent);
+        }
+        if (this.homeSiblingIndex >= 0 && this.homeSiblingIndex < this.homeParent.children.length) {
+            this.node.setSiblingIndex(this.homeSiblingIndex);
+        }
+        this.node.setPosition(this.homeLocalPos);
+        this.node.setScale(this.homeLocalScale);
+    }
+
+    private SetParentPreservingWorldTransform(parent: Node): void {
+        if (this.node.parent === parent) return;
+
+        const worldPosition = this.node.worldPosition.clone();
+        const worldScale = this.node.worldScale.clone();
+        const worldRotation = this.node.worldRotation.clone();
+
+        this.node.setParent(parent);
+        this.node.setWorldPosition(worldPosition);
+        this.node.setWorldScale(worldScale);
+        this.node.setWorldRotation(worldRotation);
+    }
+
+    private StopReturnHomeTween(): void {
+        if (this.returnHomeTween) {
+            this.returnHomeTween.stop();
+            this.returnHomeTween = null;
+        }
     }
 
     // =========================================================
@@ -340,6 +499,69 @@ export class Basket extends Item {
             if (!item?.isValid) continue;
             item.EnableItemDraggable();
         }
+    }
+
+    // =========================================================
+    // HAND TUTORIAL: FIRST FOOD ON THE BOARD
+    // =========================================================
+
+    private FirstValidContainedItem(): Item | null {
+        for (const item of this.containedItems) {
+            if (item?.isValid) return item;
+        }
+        return null;
+    }
+
+    private SubscribeFoodBoardEvents(): void {
+        for (const item of this.containedItems) {
+            if (!(item instanceof CuttingItem) || this.foodBoardListeners.has(item)) continue;
+            const listener = (): void => this.OnContainedFoodOnBoard(item);
+            this.foodBoardListeners.set(item, listener);
+            item.onMoveToCuttingBoardComplete.removeListener(listener);
+            item.onMoveToCuttingBoardComplete.addListener(listener);
+        }
+    }
+
+    private UnsubscribeFoodBoardEvents(): void {
+        for (const [item, listener] of this.foodBoardListeners) {
+            if (item?.isValid) item.onMoveToCuttingBoardComplete.removeListener(listener);
+        }
+        this.foodBoardListeners.clear();
+    }
+
+    private OnContainedFoodOnBoard(item: CuttingItem): void {
+        if (this.firstFoodOnBoard || !this.registerNoDelayForHandTut) return;
+        this.firstFoodOnBoard = item;
+        HandTutManager.Ins?.RegisterNoDelayItem(item, Basket.NO_DELAY_GROUP_FOOD);
+    }
+
+    // =========================================================
+    // ITEMS UNDER THE BASIN
+    // =========================================================
+
+    /**
+     * InputManager looks for an enabled ItemDraggable before a click, so with
+     * the basket (drag off, click on) floating over the SinkBlock a tap would
+     * grab the block. Only items that are draggable right now are touched;
+     * ones locked by someone else stay theirs to unlock.
+     */
+    private LockItemsUnderBasket(): void {
+        this.dragLockedItems.length = 0;
+        for (const item of this.lockedWhileInSink) {
+            const draggable = item?.isValid ? item.itemDraggable : null;
+            if (!draggable?.enabled) continue;
+            draggable.DisableComponent();
+            this.dragLockedItems.push(item);
+        }
+    }
+
+    private UnlockItemsUnderBasket(): void {
+        for (const item of this.dragLockedItems) {
+            if (!item?.isValid) continue;
+            // Only the enabled flag: isDraggable belongs to the item itself.
+            item.itemDraggable?.EnableComponent();
+        }
+        this.dragLockedItems.length = 0;
     }
 
     // =========================================================

@@ -431,6 +431,8 @@
     "becomeWetOnWipe": true,
     "becomeWetOnDrop": true,
     "despawnWhenCleared": true,
+    "playWipeSound": true,
+    "wipeFxType": 19,
     "onWiped": {
       "__id__": 28
     },

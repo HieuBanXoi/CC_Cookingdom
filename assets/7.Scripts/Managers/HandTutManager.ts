@@ -7,6 +7,7 @@ import { SinkBlock } from '../Gameplay/Items/SinkBlock';
 import { SinkButton } from '../Gameplay/Items/SinkButton';
 import { PlasticPeeler } from '../Gameplay/Items/PlasticPeeler';
 import { LastBowl } from '../Gameplay/Items/LastBowl';
+import { PaperBox } from '../Gameplay/Items/PaperBox';
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { ComponentCache } from '../Core/Base/CacheComponent';
 import { InputManager } from './InputManager';
@@ -55,6 +56,9 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     @property({ type: LastBowl, tooltip: 'LastBowl reference for powder rotation guidance.' })
     public lastBowl: LastBowl | null = null;
 
+    @property({ type: PaperBox, tooltip: 'Paper box guided (box -> wet food) whenever a food of its wipe type is waiting. Found in the scene when empty.' })
+    public paperBox: PaperBox | null = null;
+
     @property({ min: 10, tooltip: 'Radius for the LastBowl rotation hand tutorial gesture in pixels.' })
     public lastBowlRotateRadius: number = 80;
 
@@ -70,7 +74,13 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     @property({ min: 0 }) public idleDelay = 5;
     @property({ min: 0 }) public firstHandTutDelay = 5;
     @property({ min: 0 }) public shortIdleDelay = 0.5;
-    @property({ min: 0, tooltip: 'The first N distinct steps (items) are hinted after shortIdleDelay; re-showing the same step does not count.' }) public noDelayItemCount = 3;
+    @property({ min: 0, tooltip: 'The first N distinct steps (items) are hinted after shortIdleDelay; re-showing the same step does not count. Set 0 to rely on noDelayItems only.' }) public noDelayItemCount = 3;
+    @property({ type: [Item], tooltip: 'Items always hinted after shortIdleDelay (every step of them: e.g. the first fish, the basket, the first food in the basket). Other items wait idleDelay. A hint whose related item (knife -> food, paper box -> wet food) is in this list is fast too.' })
+    public noDelayItems: Item[] = [];
+    @property({ tooltip: 'The first InWaterItem the player drops into the sink becomes the only no-delay InWaterItem, whichever fish it is.' })
+    public noDelayFirstInWaterItem = true;
+    @property({ tooltip: 'An InWaterItem stops being no-delay once it has landed on its plate (its knife / paper / trash hints go back to the normal delay).' })
+    public noDelayInWaterItemUntilPlate = true;
     @property({ min: 0 }) public breakHeartNoDelayThreshold = 3;
     @property({ min: 0 }) public maxHandTutShowCount = 0;
 
@@ -108,9 +118,20 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     private boundPlasticPeelers = new Set<PlasticPeeler>();
     private boundLastBowls = new Set<LastBowl>();
     private isWaitingInitialSinkWaterTutorial = false;
+    /** Runtime copy of noDelayItems (the first InWaterItem in the sink may replace the configured fish). */
+    private readonly noDelaySet = new Set<Item>();
+    private firstInWaterItem: InWaterItem | null = null;
+    private firstInWaterItemOnBoard: InWaterItem | null = null;
+    /** One no-delay item per group ("fish", "basket-food"...): registering another replaces the previous one. */
+    private readonly noDelayGroups = new Map<string, Item>();
 
     protected onLoad(): void {
         super.onLoad();
+        // Seed the runtime set here (not in start): items register themselves
+        // from their own start(), which may run before this manager's.
+        for (const item of this.noDelayItems) {
+            if (item?.isValid) this.noDelaySet.add(item);
+        }
         if (this.handNode) {
             Vec3.copy(this.handDefaultScale, this.handNode.scale);
             this.handOpacity = this.handNode.getComponentInChildren(UIOpacity);
@@ -126,6 +147,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     protected start(): void {
         this.plasticPeeler ??= this.node.scene?.getComponentInChildren(PlasticPeeler) || null;
         this.lastBowl ??= this.node.scene?.getComponentInChildren(LastBowl) || null;
+        this.paperBox ??= this.node.scene?.getComponentInChildren(PaperBox) || null;
         this.bindConfiguredItems();
         this.isStarted = !this.waitForStartSignal;
         this.isWaitingInitialSinkWaterTutorial = this.showSinkWaterTutorialOnStart;
@@ -133,6 +155,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     protected update(deltaTime: number): void {
         this.removeCompletedItems();
+        this.releasePlatedNoDelayItems();
         if (!this.isStarted || this.isPaused || !this.handNode) return;
 
         // A phase can deactivate an item while its hint is already playing, or
@@ -262,9 +285,77 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         if (!item || this.itemsInWater.includes(item)) return;
 
         this.itemsInWater.push(item);
-        this.forceNoDelay = true;
+
+        // The fish the player picked first is the one guided quickly; the
+        // configured fish (if another) goes back to the normal delay.
+        if (!this.firstInWaterItem) {
+            this.firstInWaterItem = item;
+            if (this.noDelayFirstInWaterItem) {
+                for (const noDelayItem of Array.from(this.noDelaySet)) {
+                    if (noDelayItem instanceof InWaterItem && noDelayItem !== item) this.noDelaySet.delete(noDelayItem);
+                }
+                this.noDelaySet.add(item);
+            }
+        }
+
+        // Only a no-delay fish pulls the next hint (sink block / water button) in fast.
+        if (this.noDelaySet.has(item)) this.forceNoDelay = true;
         this.hideHandTut();
         this.resetIdleTimer();
+    }
+
+    /** A no-delay fish is guided quickly only up to its plate; after landing it is a normal item. */
+    private releasePlatedNoDelayItems(): void {
+        if (!this.noDelayInWaterItemUntilPlate || this.noDelaySet.size === 0) return;
+        for (const item of Array.from(this.noDelaySet)) {
+            if (!item?.isValid) {
+                this.noDelaySet.delete(item);
+            } else if (item instanceof InWaterItem && item.isOnPlate) {
+                this.noDelaySet.delete(item);
+            }
+        }
+    }
+
+    /** Marks an item as no-delay at runtime (bindable through a node param). */
+    public AddNoDelayItem(node: Node): void {
+        const item = ComponentCache.get(node, Item) || node.getComponent(Item);
+        if (item) this.noDelaySet.add(item);
+    }
+
+    /**
+     * Marks an item as no-delay. With a group, only one item of that group is
+     * no-delay at a time: the newcomer replaces the one registered before
+     * (e.g. the provisional first basket food -> the food that really reached
+     * the board first).
+     */
+    public RegisterNoDelayItem(item: Item | null, group?: string): void {
+        if (!item?.isValid) return;
+
+        if (group) {
+            const previous = this.noDelayGroups.get(group);
+            if (previous && previous !== item) this.noDelaySet.delete(previous);
+            this.noDelayGroups.set(group, item);
+        }
+        this.noDelaySet.add(item);
+    }
+
+    /** Called by InWaterItem when it lands on the cutting board: the first one becomes the no-delay fish. */
+    public RegisterInWaterItemOnBoard(item: InWaterItem): void {
+        if (!item?.isValid || this.firstInWaterItemOnBoard) return;
+        this.firstInWaterItemOnBoard = item;
+        if (!this.noDelayFirstInWaterItem) return;
+
+        // The fish the player got to the board first is the guided one; any
+        // other fish (configured or picked up in the sink) drops out.
+        for (const noDelayItem of Array.from(this.noDelaySet)) {
+            if (noDelayItem instanceof InWaterItem && noDelayItem !== item) this.noDelaySet.delete(noDelayItem);
+        }
+        this.noDelaySet.add(item);
+    }
+
+    public RemoveNoDelayItem(node: Node): void {
+        const item = ComponentCache.get(node, Item) || node.getComponent(Item);
+        if (item) this.noDelaySet.delete(item);
     }
 
     public UnregisterItemInWater(item: InWaterItem): void {
@@ -376,6 +467,27 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         }
         if (this.plasticPeeler) this.bindPlasticPeeler(this.plasticPeeler);
         if (this.lastBowl) this.bindLastBowl(this.lastBowl);
+        if (this.paperBox && !this.boundItems.has(this.paperBox)) {
+            this.boundItems.add(this.paperBox);
+            this.paperBox.itemClickable?.onClick.addListener(() => this.RegisterCorrectAction());
+        }
+    }
+
+    /** The box is guided as soon as something of its wipe type is waiting (a wet fish on the board). */
+    private isPaperBoxReady(): boolean {
+        const box = this.paperBox;
+        if (!box || !box.isValid || !box.enabled || box.isDone || !box.node.activeInHierarchy) return false;
+        if (!this.isAllowed(box)) return false;
+        return !!box.GetHandTutHint();
+    }
+
+    private showPaperBoxHandTut(): boolean {
+        const hint = this.isPaperBoxReady() ? this.paperBox!.GetHandTutHint() : null;
+        if (!hint) return false;
+
+        this.playCustomHint(hint);
+        this.setCurrentItemHandTut(this.paperBox!);
+        return true;
     }
 
     private bindPlasticPeeler(peeler: PlasticPeeler): void {
@@ -431,6 +543,9 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
             this.ShowPlasticPeelerHandTut(this.plasticPeeler, true);
             return;
         }
+
+        // Priority 2: a wet food on the board needs a paper -> take one out of the box.
+        if (this.showPaperBoxHandTut()) return;
 
         const item = this.getFirstTutorialReadyItem();
         if (!item) {
@@ -538,6 +653,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private canShowTutorialForItem(item: Item): boolean {
         if (!item || item.isDone || !item.node.activeInHierarchy) return false;
+        if (!item.CanShowHandTut()) return false;
         if (item.GetHandTutHint()) return true;
 
         const hasDragRaycastTarget = !!item.getComponent(ItemDragRaycastTarget);
@@ -808,7 +924,40 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
 
     private getCurrentDelay(): number {
         if (this.forceNoDelay || this.shownCount < this.noDelayItemCount) return this.shortIdleDelay;
+        if (this.isNextHintNoDelay()) return this.shortIdleDelay;
         return this.hasShownFirstHint ? this.idleDelay : this.firstHandTutDelay;
+    }
+
+    /**
+     * Looks at the hint showNextHandTut() would pick and tells whether it is
+     * about a no-delay item: the item itself, the item its hint is about
+     * (GetHandTutRelatedItem), or the Item its drag target belongs to.
+     */
+    private isNextHintNoDelay(): boolean {
+        if (this.noDelaySet.size === 0) return false;
+        // The start-of-game sink tutorial and the peeler keep their own timing.
+        if (this.isWaitingInitialSinkWaterTutorial || this.isPlasticPeelerReady(this.plasticPeeler)) return false;
+        if (this.isPaperBoxReady()) return this.isNoDelayItem(this.paperBox!);
+
+        const item = this.getFirstTutorialReadyItem();
+        if (item) return this.isNoDelayItem(item);
+
+        // Fallback hint: sink block / water button for a fish waiting in the sink.
+        for (const inWater of this.itemsInWater) {
+            if (!inWater?.isValid || inWater.isDone || !inWater.isInWater || !inWater.node.activeInHierarchy) continue;
+            if (this.noDelaySet.has(inWater)) return true;
+        }
+        return false;
+    }
+
+    private isNoDelayItem(item: Item): boolean {
+        if (this.noDelaySet.has(item)) return true;
+
+        const related = item.GetHandTutRelatedItem();
+        if (related && this.noDelaySet.has(related)) return true;
+
+        const dropTarget = this.findItemInParents(item.itemMoveToTarget?.defaultTarget ?? null);
+        return !!dropTarget && this.noDelaySet.has(dropTarget);
     }
 
     private canShowMore(): boolean {

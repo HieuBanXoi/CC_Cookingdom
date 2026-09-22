@@ -81,6 +81,8 @@ export class CuttingItem extends Item implements ITrashOwner {
     public platePunchDuration: number = 0.3;
 
     // --- EVENTS ---
+    private plateStepCounted: boolean = false;
+
     @property({ type: Ply_Event, tooltip: 'Triggered when move to cutting board is complete' })
     public onMoveToCuttingBoardComplete: Ply_Event = new Ply_Event();
 
@@ -236,7 +238,6 @@ export class CuttingItem extends Item implements ITrashOwner {
     }
 
     public OnMoveToPlateComplete(): void {
-        const wasOnPlate = this.isOnPlate;
         this.TryReleaseCuttingBoard();
 
         this.isOnCuttingBoard = false;
@@ -268,9 +269,8 @@ export class CuttingItem extends Item implements ITrashOwner {
 
         this.SpawnHeart();
 
-        // Landing on the plate is one completed gameplay action. Guarded so a
-        // repeated move-complete on an item already plated cannot count twice.
-        if (!wasOnPlate) this.DoOneStep();
+        // Landing on the plate completes the step once its trash is gone too.
+        this.TryCountPlateStep();
     }
 
     // =========================================================
@@ -522,6 +522,17 @@ export class CuttingItem extends Item implements ITrashOwner {
     /** ITrashOwner: a trash landed in the bin. */
     public OnTrashCleared(_trash: Trash): void {
         this.TryReleaseCuttingBoard();
+        this.TryCountPlateStep();
+    }
+
+    /**
+     * One gameplay step = the food is on its plate AND every trash it shed is
+     * in the bin, whichever of the two happens last. Counted once.
+     */
+    protected TryCountPlateStep(): void {
+        if (this.plateStepCounted || !this.isOnPlate || !this.IsAllTrashCleared()) return;
+        this.plateStepCounted = true;
+        this.DoOneStep();
     }
 
     /** The board is handed back to the next food only when this item is cut AND all its trash is gone. */

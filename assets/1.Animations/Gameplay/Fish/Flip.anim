@@ -48,6 +48,26 @@
     "_exoticAnimation": null,
     "_events": [
       {
+        "frame": 0,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0,
+        "func": "PlayWipeSound",
+        "params": []
+      },
+      {
+        "frame": 0.2833333333333333,
+        "func": "",
+        "params": []
+      },
+      {
+        "frame": 0.2833333333333333,
+        "func": "PlayWipe2Sound",
+        "params": []
+      },
+      {
         "frame": 0.5,
         "func": "",
         "params": []
@@ -1261,7 +1281,7 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0.5,
-      0.6333333333333333
+      0.6333333253860474
     ],
     "_values": [
       {
@@ -1304,7 +1324,7 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0.5,
-      0.6333333333333333
+      0.6333333253860474
     ],
     "_values": [
       {
@@ -1347,7 +1367,7 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0.5,
-      0.6333333333333333
+      0.6333333253860474
     ],
     "_values": [
       {
@@ -1390,7 +1410,7 @@
     "__type__": "cc.RealCurve",
     "_times": [
       0.5,
-      0.6333333333333333
+      0.6333333253860474
     ],
     "_values": [
       {

@@ -47,6 +47,12 @@ export class Paper extends Item {
     @property({ tooltip: 'Return this paper to its pool after it lands in the bin (otherwise it is only deactivated).' })
     public despawnWhenCleared = true;
 
+    @property({ tooltip: 'Play a sound each time the dragged paper wipes a target.' })
+    public playWipeSound = true;
+
+    @property({ type: Enum(FxType), tooltip: 'Sound played on wipe.' })
+    public wipeFxType: FxType = FxType.PaperClean;
+
     @property({ type: Ply_Event, tooltip: 'Triggered each time this paper wipes a target.' })
     public onWiped: Ply_Event = new Ply_Event();
 
@@ -235,6 +241,7 @@ export class Paper extends Item {
 
     private Wipe(target: Item): void {
         if (this.becomeWetOnWipe) this.SetWet(true);
+        if (this.playWipeSound) Ply_SoundManager.Ins?.PlayFx(this.wipeFxType);
         target.PaperOn();
         this.onWiped.invoke();
     }
@@ -289,6 +296,17 @@ export class Paper extends Item {
             return;
         }
         this.node.active = false;
+    }
+
+    /** The paper -> bin hint belongs to the food this paper wiped. */
+    public override GetHandTutRelatedItem(): Item | null {
+        for (let i = this.wipedTargets.length - 1; i >= 0; i--) {
+            const node = this.wipedTargets[i];
+            if (!node?.isValid) continue;
+            const item = node.getComponent(Item);
+            if (item) return item;
+        }
+        return null;
     }
 
     /** Drag hint towards the bin's shown position (the bin itself sits hidden below the screen). */
