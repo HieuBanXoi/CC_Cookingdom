@@ -380,6 +380,7 @@ export class Item extends Ply_GameUnit {
         if (blinkEffect) {
             Ply_SoundManager.Ins.PlayFx(FxType.Blink);
             this.AttachEffectToItem(blinkEffect);
+            blinkEffect.ApplyScale(this.blinkEffectScale);
             this.CacheActiveEffect(blinkEffect);
             blinkEffect.DeSpawnByTime();
         }

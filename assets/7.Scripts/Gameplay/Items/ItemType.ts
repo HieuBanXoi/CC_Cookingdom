@@ -15,6 +15,7 @@ export enum ItemType {
     Paper,
     PaperBox,
     FoodWet,
-
+    Fish,
+    FoodCutDone,
 }
 Enum(ItemType);

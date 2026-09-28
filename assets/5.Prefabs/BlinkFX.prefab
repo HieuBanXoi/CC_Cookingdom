@@ -3,6 +3,7 @@
     "__type__": "cc.Prefab",
     "_name": "BlinkFX",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "_native": "",
     "data": {
       "__id__": 1
@@ -66,6 +67,7 @@
     "__type__": "cc.Node",
     "_name": "Particle",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "_parent": {
       "__id__": 1
     },
@@ -115,6 +117,7 @@
     "__type__": "cc.UITransform",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 2
     },
@@ -142,6 +145,7 @@
     "__type__": "cc.ParticleSystem2D",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 2
     },
@@ -183,8 +187,8 @@
     },
     "posVar": {
       "__type__": "cc.Vec2",
-      "x": 80,
-      "y": 80
+      "x": 120,
+      "y": 120
     },
     "emitterMode": 0,
     "gravity": {
@@ -260,8 +264,6 @@
       "__id__": 0
     },
     "fileId": "71mMVchGFA2q+6pTzLu4w/",
-    "instance": null,
-    "targetOverrides": null,
     "nestedPrefabInstanceRoots": null
   },
   {
@@ -296,6 +298,7 @@
     "__type__": "6a8a0bxqihDzokUGJJpBEEF",
     "_name": "",
     "_objFlags": 0,
+    "__editorExtras__": {},
     "node": {
       "__id__": 1
     },

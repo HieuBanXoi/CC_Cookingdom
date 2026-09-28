@@ -25,6 +25,9 @@ export class Knife extends Item {
     @property({ type: Vec3, tooltip: 'Local Euler rotation offset applied to the drag visual.' })
     public knifeOnDragRotationOffset: Vec3 = new Vec3();
 
+    @property({ tooltip: 'On a successful drop, fly to the target before landing. Off: land (KnifeIn) and hide right where it was dropped.' })
+    public moveToTargetOnDrop: boolean = true;
+
     @property({ min: 0, tooltip: 'Knife drag-rotation tween duration, in seconds.' })
     public knifeOnDragRotateDuration: number = 0.15;
 
@@ -37,7 +40,7 @@ export class Knife extends Item {
 
     private readonly onBeginDrag = (): void => this.KnifeOnDrag();
     private readonly onDropFail = (): void => this.KnifeIdle();
-    private readonly onDropSuccess = (): void => this.itemMoveToTarget?.ExecuteMove();
+    private readonly onDropSuccess = (target?: Node): void => this.OnDropSuccess(target);
     private readonly onMoveComplete = (target: Node): void => this.TargetKnifeFlyEvent(target);
 
     protected onLoad(): void {
@@ -85,6 +88,14 @@ export class Knife extends Item {
     public KnifeIdle(): void {
         this.ResetKnifeOnDragRotation();
         this.SetKnifeVisualState(true, false);
+    }
+
+    private OnDropSuccess(target?: Node): void {
+        if (this.moveToTargetOnDrop) {
+            this.itemMoveToTarget?.ExecuteMove();
+            return;
+        }
+        this.TargetKnifeFlyEvent(target);
     }
 
     public TargetKnifeFlyEvent(targetNode?: Node): void {

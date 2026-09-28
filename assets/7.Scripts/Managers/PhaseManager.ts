@@ -18,8 +18,8 @@ Enum(PhaseTransitionType);
 /** Inspector data for one playable phase. */
 @ccclass('PhaseData')
 export class PhaseData {
-    @property({ type: Node, tooltip: 'Root node containing all objects of this phase.' })
-    public phaseObject: Node | null = null;
+    @property({ type: [Node], tooltip: 'Nodes of this phase. They are shown/hidden and slid together, each around its own scene position.' })
+    public phaseObjects: Node[] = [];
 
     @property({ min: 0, tooltip: 'Number of successful steps required to finish this phase.' })
     public totalSteps = 1;
@@ -69,16 +69,22 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
     /** How many entries of PROGRESS_MILESTONES have been sent. */
     private reportedMilestoneCount = 0;
 
-    /** Local centre position captured from the first active phase. */
-    private centerScreenPosition = new Vec3();
+    /** Resting local position of every phase node, captured from the scene on load. */
+    private readonly homePositions = new Map<Node, Vec3>();
     private isChangingPhase = false;
     private delayTween: Tween<Node> | null = null;
-    private outgoingTween: Tween<Node> | null = null;
-    private incomingTween: Tween<Node> | null = null;
+    private readonly outgoingTweens: Tween<Node>[] = [];
+    private readonly incomingTweens: Tween<Node>[] = [];
     private transitionTween: Tween<Node> | null = null;
 
-    public get CurrentPhaseObject(): Node | null {
-        return this.phases[this.currentPhaseIndex]?.phaseObject ?? null;
+    public get CurrentPhaseObjects(): Node[] {
+        return this.GetPhaseObjects(this.currentPhaseIndex);
+    }
+
+    /** Valid nodes of the phase at index (empty when out of range). */
+    public GetPhaseObjects(index: number): Node[] {
+        const nodes = this.phases[index]?.phaseObjects ?? [];
+        return nodes.filter(node => !!node?.isValid);
     }
 
     /** Sum of totalSteps over every phase. */
@@ -180,18 +186,24 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
         this.currentPhaseIndex = Math.max(0, Math.min(this.currentPhaseIndex, this.phases.length - 1));
         for (let index = 0; index < this.phases.length; index++) {
-            const phaseNode = this.phases[index]?.phaseObject;
-            if (!phaseNode) continue;
-
             const isCurrent = index === this.currentPhaseIndex;
-            phaseNode.active = isCurrent;
-            if (!isCurrent) continue;
-
-            Vec3.copy(this.centerScreenPosition, phaseNode.position);
-            this.phases[index].onPhaseReady.invoke();
+            for (const phaseNode of this.GetPhaseObjects(index)) {
+                if (!this.homePositions.has(phaseNode)) this.homePositions.set(phaseNode, phaseNode.position.clone());
+                phaseNode.active = isCurrent;
+            }
         }
 
+        this.phases[this.currentPhaseIndex]?.onPhaseReady.invoke();
         if (this.phaseTransitionObject) this.phaseTransitionObject.active = false;
+    }
+
+    private GetHomePosition(node: Node): Vec3 {
+        let home = this.homePositions.get(node);
+        if (!home) {
+            home = node.position.clone();
+            this.homePositions.set(node, home);
+        }
+        return home;
     }
 
     private beginPhaseTransition(): void {
@@ -210,40 +222,45 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
     }
 
     private slideToNextPhase(): void {
-        const oldPhase = this.CurrentPhaseObject;
+        const oldNodes = this.CurrentPhaseObjects;
         const newIndex = this.currentPhaseIndex + 1;
-        const newPhase = this.phases[newIndex];
-        const newNode = newPhase?.phaseObject ?? null;
+        const newNodes = this.GetPhaseObjects(newIndex);
         const duration = Math.max(0.01, this.transitionDuration);
+        const isVertical = this.transitionType === PhaseTransitionType.VerticalSlide;
 
         this.currentPhaseIndex = newIndex;
         this.currentStepCount = 0;
 
-        if (oldPhase) {
-            const oldTarget = this.transitionType === PhaseTransitionType.VerticalSlide
-                ? new Vec3(this.centerScreenPosition.x, this.centerScreenPosition.y + this.offScreenBottomY, oldPhase.position.z)
-                : new Vec3(this.centerScreenPosition.x + this.offScreenLeftX, this.centerScreenPosition.y, oldPhase.position.z);
-            this.outgoingTween = tween(oldPhase)
+        for (const oldNode of oldNodes) {
+            const home = this.GetHomePosition(oldNode);
+            const oldTarget = isVertical
+                ? new Vec3(home.x, home.y + this.offScreenBottomY, oldNode.position.z)
+                : new Vec3(home.x + this.offScreenLeftX, home.y, oldNode.position.z);
+            this.outgoingTweens.push(tween(oldNode)
                 .to(duration, { position: oldTarget }, { easing: 'quadInOut' })
-                .call(() => oldPhase.active = false)
-                .start();
+                .call(() => oldNode.active = false)
+                .start());
         }
 
-        if (!newNode) {
+        if (newNodes.length === 0) {
             this.completeTransition();
             return;
         }
 
-        const startPosition = this.transitionType === PhaseTransitionType.VerticalSlide
-            ? new Vec3(this.centerScreenPosition.x, this.centerScreenPosition.y + this.offScreenBottomY, newNode.position.z)
-            : new Vec3(this.centerScreenPosition.x + this.offScreenRightX, this.centerScreenPosition.y, newNode.position.z);
-        const targetPosition = new Vec3(this.centerScreenPosition.x, this.centerScreenPosition.y, newNode.position.z);
-        newNode.active = true;
-        newNode.setPosition(startPosition);
-        this.incomingTween = tween(newNode)
-            .to(duration, { position: targetPosition }, { easing: 'quadInOut' })
-            .call(() => this.completeTransition())
-            .start();
+        newNodes.forEach((newNode, index) => {
+            const home = this.GetHomePosition(newNode);
+            const startPosition = isVertical
+                ? new Vec3(home.x, home.y + this.offScreenBottomY, newNode.position.z)
+                : new Vec3(home.x + this.offScreenRightX, home.y, newNode.position.z);
+            const targetPosition = new Vec3(home.x, home.y, newNode.position.z);
+            newNode.active = true;
+            newNode.setPosition(startPosition);
+
+            const incoming = tween(newNode).to(duration, { position: targetPosition }, { easing: 'quadInOut' });
+            // All nodes share the same duration: the first one reports the end of the transition.
+            if (index === 0) incoming.call(() => this.completeTransition());
+            this.incomingTweens.push(incoming.start());
+        });
     }
 
     private playObjectTransition(): void {
@@ -262,23 +279,20 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
     }
 
     private switchPhaseImmediately(): void {
-        const oldNode = this.CurrentPhaseObject;
+        for (const oldNode of this.CurrentPhaseObjects) oldNode.active = false;
         this.currentPhaseIndex++;
         this.currentStepCount = 0;
-        if (oldNode) oldNode.active = false;
 
-        const newPhase = this.phases[this.currentPhaseIndex];
-        const newNode = newPhase?.phaseObject;
-        if (newNode) {
-            newNode.setPosition(this.centerScreenPosition);
+        for (const newNode of this.CurrentPhaseObjects) {
+            newNode.setPosition(this.GetHomePosition(newNode));
             newNode.active = true;
         }
     }
 
     private completeTransition(): void {
         this.isChangingPhase = false;
-        this.outgoingTween = null;
-        this.incomingTween = null;
+        this.outgoingTweens.length = 0;
+        this.incomingTweens.length = 0;
         this.transitionTween = null;
 
         const phase = this.phases[this.currentPhaseIndex];
@@ -303,12 +317,12 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
     private stopTransitionTweens(): void {
         this.delayTween?.stop();
-        this.outgoingTween?.stop();
-        this.incomingTween?.stop();
+        for (const outgoing of this.outgoingTweens) outgoing.stop();
+        for (const incoming of this.incomingTweens) incoming.stop();
         this.transitionTween?.stop();
         this.delayTween = null;
-        this.outgoingTween = null;
-        this.incomingTween = null;
+        this.outgoingTweens.length = 0;
+        this.incomingTweens.length = 0;
         this.transitionTween = null;
     }
 }

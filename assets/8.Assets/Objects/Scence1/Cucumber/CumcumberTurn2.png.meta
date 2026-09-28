@@ -1,0 +1,138 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "9b70524a-fede-433b-ab3e-89a4ff5cd3dc",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "9b70524a-fede-433b-ab3e-89a4ff5cd3dc@6c48a",
+      "displayName": "CumcumberTurn2",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "9b70524a-fede-433b-ab3e-89a4ff5cd3dc",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "9b70524a-fede-433b-ab3e-89a4ff5cd3dc@f9941",
+      "displayName": "CumcumberTurn2",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": -9.5,
+        "offsetY": 4,
+        "trimX": 37,
+        "trimY": 61,
+        "width": 464,
+        "height": 121,
+        "rawWidth": 557,
+        "rawHeight": 251,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -232,
+            -60.5,
+            0,
+            232,
+            -60.5,
+            0,
+            -232,
+            60.5,
+            0,
+            232,
+            60.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            37,
+            190,
+            501,
+            190,
+            37,
+            69,
+            501,
+            69
+          ],
+          "nuv": [
+            0.06642728904847396,
+            0.2749003984063745,
+            0.8994614003590664,
+            0.2749003984063745,
+            0.06642728904847396,
+            0.7569721115537849,
+            0.8994614003590664,
+            0.7569721115537849
+          ],
+          "minPos": [
+            -232,
+            -60.5,
+            0
+          ],
+          "maxPos": [
+            232,
+            60.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "9b70524a-fede-433b-ab3e-89a4ff5cd3dc@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "9b70524a-fede-433b-ab3e-89a4ff5cd3dc@6c48a",
+    "compressSettings": {
+      "useCompressTexture": true,
+      "presetId": "03/m4ybQVOJ7SPOhieTjrl"
+    }
+  }
+}
