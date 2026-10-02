@@ -36,13 +36,20 @@ export class ItemToTarget extends Item {
     @property({ tooltip: 'Immediately hide this item after a successful drop instead of moving it.' })
     public disableItemWhenDrop: boolean = false;
 
+    @property({ tooltip: 'Hide this item (node.active = false) once it arrives, after the arrival animations start.' })
+    public hideItemWhenArrive: boolean = false;
+
     @property({ tooltip: 'Mark this Item complete and remove it from the hand tutorial after arrival.' })
     public itemDoneWhenArrive: boolean = false;
 
     @property({ tooltip: 'After this item\'s regular Animation clip finishes, call DoneAnimation() (mark done and return without heart).' })
     public doneAnimationWhenItemAnimationFinished: boolean = true;
 
+    @property({ tooltip: 'Bật: giữ Target Item Type của ItemDraggable ngay từ đầu. Tắt: lúc start bỏ target (drop không trúng, HandTut bỏ qua) cho tới khi gọi SetTarget().' })
+    public setTargetOnStart: boolean = true;
+
     private waitingForMoveComplete = false;
+    private savedTargetItemType: ItemType = ItemType.None;
     private animationWaitingForDone: Animation | null = null;
 
     private readonly onDropSuccess = () => this.MoveToCurrentTarget();
@@ -52,6 +59,36 @@ export class ItemToTarget extends Item {
 
     protected onLoad(): void {
         super.onLoad();
+
+        if (!this.itemDraggable) return;
+
+        if (this.setTargetOnStart) {
+            if (this.targetItem) this.SetTarget();
+        } else {
+            this.savedTargetItemType = this.itemDraggable.targetItemType;
+            this.itemDraggable.targetItemType = ItemType.None;
+        }
+    }
+
+    /**
+     * Bindable from a Ply_Event: enables dropping on the target item.
+     * With Target Item assigned, points ItemMoveToTarget.defaultTarget at it and
+     * uses its type; otherwise restores the type saved at start.
+     */
+    public SetTarget(): void {
+        if (!this.itemDraggable) return;
+
+        if (this.targetItem) {
+            if (this.itemMoveToTarget) this.itemMoveToTarget.defaultTarget = this.targetItem.node;
+            this.itemDraggable.targetItemType = this.targetItem.itemType;
+            return;
+        }
+
+        if (this.savedTargetItemType === ItemType.None) {
+            console.warn(`[ItemToTarget] No target type to set on "${this.node.name}". Assign Target Item or ItemDraggable.targetItemType.`);
+            return;
+        }
+        this.itemDraggable.targetItemType = this.savedTargetItemType;
     }
 
     protected onEnable(): void {
@@ -60,9 +97,16 @@ export class ItemToTarget extends Item {
     }
 
     protected onDisable(): void {
+        // ItemMoveToTarget reparents before emitting EVENT_COMPLETE; if the
+        // target is inactive (e.g. a bowl layer its arrival animation turns
+        // on) this node is deactivated mid-move. Keep listening so the
+        // arrival animations still play.
+        if (this.waitingForMoveComplete) {
+            this.itemDraggable?.onDropSuccess.removeListener(this.onDropSuccess);
+            return;
+        }
         this.unsubscribeMovementEvents();
         this.stopWaitingForItemAnimation();
-        this.waitingForMoveComplete = false;
     }
 
     public MoveToCurrentTarget(): void {
@@ -87,12 +131,21 @@ export class ItemToTarget extends Item {
         if (this.waitingForMoveComplete) this.waitingForMoveComplete = false;
 
         this.itemDraggable?.DisableComponent();
-        this.playItemArrivalAnimation();
+        const hasItemAnimation = this.playItemArrivalAnimation();
         this.playAnimation(this.targetItem, this.targetItemArrivalAnimation);
         this.itemDraggable.targetItemType = ItemType.None;
         if (this.itemDoneWhenArrive) {
             this.ItemDone();
             HandTutManager.Ins?.ItemDone(this.node);
+        }
+        if (this.hideItemWhenArrive) {
+            this.node.active = false;
+            return;
+        }
+
+        // No arrival animation to wait for: finish right away (return to start).
+        if (!hasItemAnimation && this.doneAnimationWhenItemAnimationFinished && !this.disableItemWhenDrop) {
+            this.DoneAnimation();
         }
     }
 
@@ -121,25 +174,26 @@ export class ItemToTarget extends Item {
         }
     }
 
-    private playItemArrivalAnimation(): void {
+    /** Returns false when no item arrival animation is configured. */
+    private playItemArrivalAnimation(): boolean {
         const config = this.itemArrivalAnimation;
-        if (!config) return;
+        if (!config) return false;
 
         if (config.controllerTrigger.trim()) {
             this.PlayTrigger(config.controllerTrigger.trim());
             if (this.doneAnimationWhenItemAnimationFinished) {
                 console.warn(`[ItemToTarget] AnimationController cannot emit a generic finish event. Add an Animation Graph event that calls DoneAnimation() on "${this.node.name}".`);
             }
-            return;
+            return true;
         }
 
-        if (config.animationClipIndex < 0) return;
+        if (config.animationClipIndex < 0) return false;
 
         const animationComponent = this.animationComponent;
         const clip = animationComponent?.clips[config.animationClipIndex];
         if (!animationComponent || !clip) {
             this.PlayClipWithIndex(config.animationClipIndex);
-            return;
+            return true;
         }
 
         if (this.doneAnimationWhenItemAnimationFinished) {
@@ -149,6 +203,7 @@ export class ItemToTarget extends Item {
         }
 
         animationComponent.play(clip.name);
+        return true;
     }
 
     private readonly onItemAnimationFinished = (): void => {

@@ -68,6 +68,9 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
     @property({ tooltip: 'Restore the original parent once the move finishes. While moving the item stays where it is (e.g. under InputManager.draggingNode) so it renders above the drop target.' })
     public resetParentBeforeMove: boolean = true;
 
+    @property({ tooltip: 'Tắt component này sau khi move tới target xong (HandTut sẽ không chọn item này nữa).' })
+    public disableOnComplete: boolean = false;
+
     private originalParent: Node | null = null;
 
     protected onLoad() {
@@ -186,6 +189,11 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
 
         if (this.playMoveToTargetFinishSound) {
             Ply_SoundManager.Ins.PlayFx(this.moveToTargetFinishFxType);
+        }
+
+        // Disable before emitting so complete listeners can re-enable it if needed.
+        if (this.disableOnComplete) {
+            this.enabled = false;
         }
 
         // Code listeners (Knife, Spatula, ...) run before Inspector handlers so an

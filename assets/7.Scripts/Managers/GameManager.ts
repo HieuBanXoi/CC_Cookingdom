@@ -109,6 +109,11 @@ export class GameManager extends Ply_Singleton<GameManager> {
         return this.isPlaying;
     }
 
+    /** True when gameplay is stopped but the hand tutorial should remain visible. */
+    public IsStopGameState(): boolean {
+        return this.currentState instanceof StopGameState;
+    }
+
     public SetIsPlaying(isPlaying: boolean) {
         this.isPlaying = isPlaying;
     }

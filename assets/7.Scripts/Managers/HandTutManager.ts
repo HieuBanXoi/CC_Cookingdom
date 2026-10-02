@@ -177,7 +177,9 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         // Also stay quiet while gameplay input is locked (an item is flying to
         // its target, a zoom is playing...): a hint then would point at an item
         // the player cannot touch yet, and could linger after it moved away.
-        const inputLocked = !!GameManager.Ins && !GameManager.Ins.IsPlaying();
+        const inputLocked = !!GameManager.Ins
+            && !GameManager.Ins.IsPlaying()
+            && !GameManager.Ins.IsStopGameState();
         if (this.isPointerDown || this.isGameplayDragging || InputManager.Ins?.isDragging || inputLocked) {
             this.resetIdleTimer();
             this.hideHandTut();
