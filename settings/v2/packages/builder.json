@@ -4,18 +4,18 @@
     "totalTime": 500,
     "logo": {
       "type": "custom",
-      "image": "project://settings/splash.png"
+      "image": "project://settings/logo.png"
     },
     "background": {
       "type": "color",
       "color": {
-        "x": 1,
-        "y": 0.8392156862745098,
-        "z": 0.49411764705882355,
+        "x": 0.5098039215686274,
+        "y": 0.8823529411764706,
+        "z": 0.9529411764705882,
         "w": 1
       }
     },
-    "displayRatio": 1.55
+    "displayRatio": 0.41
   },
   "textureCompressConfig": {
     "userPreset": {
