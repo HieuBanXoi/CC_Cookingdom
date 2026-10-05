@@ -1,0 +1,275 @@
+capi-mini.png
+	size: 2020, 1240
+	filter: Linear, Linear
+	pma: true
+	scale: 0.8
+ITEM/CLOTH/BODY/MUSICAL-shaker-bloath
+	bounds: 1359, 702, 258, 73
+	rotate: 90
+ITEM/CLOTH/BODY/MUSICAL-vocal-flower-body
+	bounds: 1578, 15, 227, 82
+	rotate: 90
+ITEM/CLOTH/BODY/event-body-thanksgiving
+	bounds: 1209, 700, 250, 148
+	rotate: 90
+ITEM/CLOTH/BODY/event-body-thanksgiving1
+	bounds: 1818, 435, 66, 73
+ITEM/CLOTH/BODY/event-noel-cloth
+	bounds: 1277, 962, 276, 192
+	rotate: 90
+ITEM/CLOTH/BODY/event-noel-cloth-arrm
+	bounds: 1778, 3, 68, 90
+	rotate: 90
+ITEM/CLOTH/BODY/event-noel-pack
+	bounds: 2, 225, 463, 370
+	rotate: 90
+ITEM/CLOTH/BODY/event-vampire-vest
+	bounds: 1021, 410, 286, 187
+	rotate: 90
+ITEM/CLOTH/BODY/event-vampire-vestb
+	bounds: 1336, 244, 267, 182
+ITEM/CLOTH/BODY/event-vampire-vestb - Copy
+	bounds: 1662, 2, 114, 58
+ITEM/CLOTH/BODY/event-witchcloak
+	bounds: 529, 694, 294, 199
+ITEM/CLOTH/BODY/event-witchcloak-hand-up-1
+	bounds: 203, 816, 54, 57
+	rotate: 90
+ITEM/CLOTH/BODY/event-witchcloakb
+	bounds: 2, 11, 328, 212
+ITEM/CLOTH/BODY/normal-backpack
+	bounds: 654, 17, 209, 162
+	rotate: 90
+ITEM/CLOTH/BODY/normal-backpack-yel
+	bounds: 332, 14, 209, 162
+	rotate: 90
+ITEM/CLOTH/BODY/normal-backpackb
+	bounds: 818, 22, 295, 204
+ITEM/CLOTH/BODY/normal-backpackb-yel
+	bounds: 815, 397, 295, 204
+	rotate: 90
+ITEM/CLOTH/BODY/normal-blink-blink
+	bounds: 992, 235, 242, 160
+ITEM/CLOTH/BODY/normal-blink-blinkB
+	bounds: 1905, 523, 55, 111
+	rotate: 90
+ITEM/CLOTH/BODY/normal-collar
+	bounds: 575, 2, 224, 77
+	rotate: 90
+ITEM/CLOTH/BODY/normal-collar-orange
+	bounds: 496, 2, 224, 77
+	rotate: 90
+ITEM/CLOTH/BODY/normal-sir-collar
+	bounds: 1459, 3, 239, 77
+	rotate: 90
+ITEM/CLOTH/BODY/normal-sir-collar-black
+	bounds: 39, 691, 209, 123
+ITEM/CLOTH/HEAD/MUSICAL-bass-frog
+	bounds: 262, 692, 178, 31
+	rotate: 90
+ITEM/CLOTH/HEAD/MUSICAL-bass-frogg
+	bounds: 1620, 863, 115, 112
+	offsets: 0, 5, 115, 121
+ITEM/CLOTH/HEAD/MUSICAL-guitar-birdB
+	bounds: 917, 232, 163, 73
+	rotate: 90
+ITEM/CLOTH/HEAD/MUSICAL-guitar-birdC
+	bounds: 1745, 1123, 115, 121
+	rotate: 90
+ITEM/CLOTH/HEAD/MUSICAL-guitar-birdF
+	bounds: 1130, 700, 197, 77
+	offsets: 0, 0, 198, 89
+	rotate: 90
+ITEM/CLOTH/HEAD/MUSICAL-kick-head
+	bounds: 970, 698, 199, 82
+	offsets: 0, 0, 199, 84
+	rotate: 90
+ITEM/CLOTH/HEAD/MUSICAL-snare
+	bounds: 1054, 698, 199, 74
+	offsets: 0, 10, 199, 84
+	rotate: 90
+ITEM/CLOTH/HEAD/carot
+	bounds: 1636, 1062, 100, 90
+ITEM/CLOTH/HEAD/event-Witchhat
+	bounds: 362, 895, 343, 229
+	rotate: 90
+ITEM/CLOTH/HEAD/event-noel-hat
+	bounds: 1125, 952, 286, 150
+	rotate: 90
+ITEM/CLOTH/HEAD/event-thanksgiving-hat
+	bounds: 374, 373, 318, 187
+	rotate: 90
+ITEM/CLOTH/HEAD/event-vampirehair
+	bounds: 295, 693, 232, 177
+	offsets: 2, 0, 235, 177
+ITEM/CLOTH/HEAD/flower
+	bounds: 1745, 862, 67, 120
+	rotate: 90
+ITEM/CLOTH/HEAD/normal-sir-hat
+	bounds: 825, 695, 202, 143
+	rotate: 90
+ITEM/CLOTH/HEAD/normal-sir-hat-black
+	bounds: 468, 228, 202, 143
+ITEM/CLOTH/HEAD/normal-snapback
+	bounds: 1756, 73, 194, 92
+	rotate: 90
+ITEM/CLOTH/HEAD/normal-snapback-blue
+	bounds: 1662, 62, 194, 92
+	rotate: 90
+ITEM/CLOTH/HEAD/normal-snapbackb
+	bounds: 1886, 443, 100, 65
+ITEM/CLOTH/HEAD/normal-snapbackb-blue
+	bounds: 1636, 995, 100, 65
+ITEM/CLOTH/HEAD/pot-B
+	bounds: 332, 3, 67, 9
+ITEM/CLOTH/HEAD/pot-F
+	bounds: 1072, 899, 67, 44
+ITEM/FOOD/Berry/berry-eat1
+	bounds: 1736, 730, 130, 128
+	rotate: 90
+ITEM/FOOD/Berry/berry-eat2
+	bounds: 1745, 1029, 92, 121
+	offsets: 38, 7, 130, 128
+	rotate: 90
+ITEM/FOOD/Berry/berry-eat3
+	bounds: 1685, 509, 87, 90
+	offsets: 43, 38, 130, 128
+	rotate: 90
+ITEM/FOOD/Berry/berry-raw
+	bounds: 1736, 598, 130, 128
+	rotate: 90
+ITEM/FOOD/Ca/ca-eat1
+	bounds: 1471, 977, 87, 261
+	offsets: 6, 0, 117, 261
+ITEM/FOOD/Ca/ca-eat2
+	bounds: 1535, 714, 83, 261
+	offsets: 7, 0, 117, 261
+ITEM/FOOD/Ca/ca-eat3
+	bounds: 1560, 977, 74, 261
+	offsets: 16, 0, 117, 261
+ITEM/FOOD/Ca/ca-raw
+	bounds: 1481, 437, 118, 261
+ITEM/FOOD/Carot/Carot-eat1
+	bounds: 1434, 756, 204, 82
+	rotate: 90
+ITEM/FOOD/Carot/Carot-eat2
+	bounds: 1743, 269, 159, 82
+	offsets: 45, 0, 204, 82
+	rotate: 90
+ITEM/FOOD/Carot/Carot-eat3
+	bounds: 1866, 598, 70, 75
+	offsets: 134, 3, 204, 82
+ITEM/FOOD/Carot/Carot-raw
+	bounds: 1601, 508, 204, 82
+	rotate: 90
+ITEM/FOOD/Tao/tao-eat1
+	bounds: 1868, 923, 157, 149
+	offsets: 2, 4, 166, 159
+	rotate: 90
+ITEM/FOOD/Tao/tao-eat2
+	bounds: 1870, 1082, 156, 148
+	offsets: 3, 4, 166, 159
+	rotate: 90
+ITEM/FOOD/Tao/tao-eat3
+	bounds: 1870, 137, 141, 136
+	offsets: 12, 6, 166, 159
+ITEM/FOOD/Tao/tao-raw
+	bounds: 1866, 675, 157, 149
+	offsets: 2, 4, 166, 159
+	rotate: 90
+ITEM/MINI-GAME/Music/Bass
+	bounds: 39, 816, 422, 162
+	offsets: 0, 0, 422, 163
+	rotate: 90
+ITEM/MINI-GAME/Music/cymbal-1
+	bounds: 593, 899, 285, 44
+ITEM/MINI-GAME/Music/cymbal-hat
+	bounds: 1827, 931, 96, 39
+	rotate: 90
+ITEM/MINI-GAME/Music/guitar2
+	bounds: 203, 872, 366, 157
+	rotate: 90
+ITEM/MINI-GAME/Music/hand-drum
+	bounds: 1601, 430, 142, 76
+ITEM/MINI-GAME/Music/hand-micro
+	bounds: 374, 226, 145, 92
+	offsets: 0, 14, 153, 107
+	rotate: 90
+ITEM/MINI-GAME/Music/hand-shaker
+	bounds: 1867, 834, 151, 87
+ITEM/MINI-GAME/Music/hand-slap1
+	bounds: 1827, 275, 158, 90
+	rotate: 90
+ITEM/MINI-GAME/Music/hand-slap2
+	bounds: 1919, 283, 158, 90
+	rotate: 90
+ITEM/MINI-GAME/Music/hihat
+	bounds: 1538, 13, 229, 38
+	rotate: 90
+ITEM/MINI-GAME/Music/kick
+	bounds: 1210, 428, 270, 269
+	rotate: 90
+ITEM/MINI-GAME/Music/sax-head
+	bounds: 1605, 258, 136, 170
+ITEM/MINI-GAME/Music/snare
+	bounds: 1236, 238, 188, 98
+	rotate: 90
+ITEM/MINI-GAME/Music/stick
+	bounds: 452, 879, 14, 43
+	rotate: 90
+ITEM/MINI-GAME/cog
+	bounds: 1685, 607, 64, 35
+	rotate: 90
+ITEM/MINI-GAME/fishing
+	bounds: 2, 690, 35, 548
+ITEM/MINI-GAME/switch
+	bounds: 880, 899, 44, 190
+	rotate: 90
+body
+	bounds: 859, 945, 264, 293
+body-shadow
+	bounds: 593, 945, 264, 293
+cry
+	bounds: 402, 878, 15, 48
+	rotate: 90
+ear
+	bounds: 1434, 700, 54, 55
+	offsets: 0, 0, 55, 55
+	rotate: 90
+emotion/angry
+	bounds: 1141, 900, 58, 50
+emotion/shy
+	bounds: 362, 876, 38, 17
+eye
+	bounds: 1685, 673, 42, 42
+	offsets: 0, 0, 42, 43
+eye-hungry
+	bounds: 1491, 712, 42, 42
+	offsets: 0, 0, 42, 43
+hand-2
+	bounds: 1777, 510, 86, 126
+	rotate: 90
+hand-down-1
+	bounds: 1745, 431, 71, 76
+hand-up-1
+	bounds: 1745, 959, 68, 80
+	offsets: 0, 0, 72, 88
+	rotate: 90
+head
+	bounds: 563, 392, 300, 250
+	rotate: 90
+leg-sit
+	bounds: 672, 228, 243, 162
+leg-stand
+	bounds: 1287, 6, 170, 230
+leg-stand-s
+	bounds: 1115, 3, 170, 230
+mouth
+	bounds: 1636, 1154, 106, 84
+shadow-all
+	bounds: 1620, 717, 115, 114
+	rotate: 90
+sleep
+	bounds: 1938, 580, 93, 79
+	offsets: 0, 0, 94, 79
+	rotate: 90

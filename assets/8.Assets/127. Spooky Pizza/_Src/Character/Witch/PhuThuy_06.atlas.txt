@@ -1,0 +1,13 @@
+PhuThuy_06.png
+size:632,316
+filter:Linear,Linear
+pma:true
+43_char
+bounds:2,2,312,392
+rotate:90
+Layer 9
+bounds:396,13,301,163
+rotate:90
+shadow
+bounds:561,173,141,68
+rotate:90
