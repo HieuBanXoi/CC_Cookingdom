@@ -152,8 +152,8 @@
             "_value": false
           },
           "spine": {
-            "_value": false,
-            "_option": "spine-3.8"
+            "_value": true,
+            "_option": "spine-4.2"
           },
           "spine-3.8": {
             "_value": false,
@@ -193,7 +193,9 @@
             "_value": false
           }
         },
-        "flags": {},
+        "flags": {
+          "LOAD_SPINE_MANUALLY": false
+        },
         "name": "Migrated Configuration",
         "includeModules": [
           "2d",
@@ -211,6 +213,7 @@
           "meshopt",
           "particle-2d",
           "procedural-animation",
+          "spine-4.2",
           "tween",
           "ui"
         ],

@@ -8,6 +8,13 @@ description: "Quy ước xây dựng Item gameplay cho Cookingdom (Cocos Creator
 Áp dụng mỗi khi tạo/sửa item gameplay, cơ chế tương tác mới, hoặc hand tutorial.
 Đường dẫn gốc: `assets/7.Scripts/Gameplay/Items/`, manager: `assets/7.Scripts/Managers/`.
 
+Cấu trúc thư mục Items:
+- `Common/` — script chung dùng cho mọi item: `Item`, `ItemType`, `ItemClickable`, `ItemDraggable`,
+  `ItemMoveToTarget`, `ItemStirring`, `ItemSound`, `ItemDragChildRotator`, `ItemDragRaycastTarget`, `ItemToTarget`.
+- `Special/<Nhóm>/` — item đặc thù theo cơ chế: `Cutting/` (thớt, dao, đồ cắt), `Water/` (bồn rửa, đồ ngâm nước),
+  `Cooking/` (chảo, xẻng, bát, đĩa, bóc màng), `Trash/` (rác, thùng rác, giấy).
+  Item mới đặc thù đặt vào nhóm phù hợp (hoặc tạo nhóm mới trong `Special/`); chỉ đưa vào `Common/` khi tái sử dụng được cho nhiều item.
+
 ## 1. Cấu trúc một Item (bắt buộc)
 
 Mọi node gameplay tương tác được **luôn** có component `Item` hoặc script kế thừa `Item`
@@ -19,9 +26,18 @@ Mọi node gameplay tương tác được **luôn** có component `Item` hoặc 
 | `Item` (hoặc subclass) | Luôn luôn | Giữ `itemType`, `isDone`, `onProcess`, ref tới các component dưới |
 | `ItemClickable` | Item cần **click/tap** | Sự kiện: `onClick`, `onClickComplete` (`requiredClicks`, `infiniteClick`, `disableAfterClick`, `canClick`) |
 | `ItemDraggable` | Item cần **drag** | Sự kiện: `onBeginDrag`, `onDropSuccess(targetNode)`, `onDropFail`, `onReturnToStartComplete`. Drop thành công khi thả lên `Item` khác có `itemType === targetItemType` |
-| `ItemMoveToTarget` | **Bắt buộc đi kèm `ItemDraggable`** | `defaultTarget` là đích hand-tut kéo tới; `ExecuteMove()` tween tới target, emit `ItemMoveToTarget.EVENT_COMPLETE` trên node |
+| `ItemMoveToTarget` | **Bắt buộc đi kèm `ItemDraggable`** | `defaultTarget` là đích hand-tut kéo tới; `ExecuteMove()` tween tới target, emit `ItemMoveToTarget.EVENT_COMPLETE` trên node rồi gọi Ply_Event `onComplete(targetNode)` |
 | `ItemStirring` | Item cần khuấy/xoay | Sự kiện `onStirComplete`; HandTut dùng `IsDone` |
 | `ItemSound` | Tuỳ chọn | Âm thanh riêng của item |
+
+`ItemMoveToTarget` có tab **Punch** (`punchOnComplete`, `punchStrength`, `punchDuration`, `punchElasticity`,
+`punchStartProgress`, `waitPunchBeforeComplete`): squash & stretch (X dài/Y co rồi Y dãn/X co rồi về gốc),
+bắt đầu khi đi được `punchStartProgress` quãng đường (mặc định 90%); `PlayPunch()`/`StopPunch()` bind được từ Ply_Event,
+`WhenPunchDone(cb)` để chờ punch xong. `onComplete` là Ply_Event (truyền target Node).
+
+Quy ước Inspector cho script trong `Common/`: field quan trọng nhất để ngoài (không group), còn lại chia tab bằng
+`group: { name, id }` (cùng `id` trong 1 script), field phụ thuộc toggle dùng `visible: function (this: X) { return ...; }`.
+Không đổi tên property đã serialize (mất dữ liệu scene/prefab).
 
 **Quy tắc cứng:** thêm `ItemDraggable` ⇒ phải thêm `ItemMoveToTarget` và gán `defaultTarget`.
 Hand-tut cho drag dựa vào cặp `ItemDraggable.targetItemType` + `ItemMoveToTarget.defaultTarget`;
@@ -46,8 +62,9 @@ Mẫu chuẩn (theo `Knife.ts`, `Spatula.ts`):
 
 ```ts
 import { _decorator, Node } from 'cc';
-import { Item } from './Item';
-import { ItemMoveToTarget } from './ItemMoveToTarget';
+// File đặt tại Items/Special/<Nhóm>/MyTool.ts
+import { Item } from '../../Common/Item';
+import { ItemMoveToTarget } from '../../Common/ItemMoveToTarget';
 
 const { ccclass, property } = _decorator;
 

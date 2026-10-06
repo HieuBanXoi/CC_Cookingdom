@@ -1,4 +1,4 @@
-import { _decorator, Enum, Node, Tween, tween, Vec3 } from 'cc';
+import { _decorator, Canvas, Enum, Node, Sprite, SpriteFrame, Tween, tween, UITransform, Vec3 } from 'cc';
 import { GameManager } from './GameManager';
 import { HandTutManager } from './HandTutManager';
 import { Ply_Event } from '../Core/Base/Ply_Event';
@@ -12,8 +12,18 @@ export enum PhaseTransitionType {
     HorizontalSlide = 0,
     VerticalSlide,
     ObjectTransition,
+    /** Many copies of one sprite fly in from both sides, cover the screen, then fly back out. */
+    SpriteSwarm,
 }
 Enum(PhaseTransitionType);
+
+/** One sprite of the swarm transition. */
+interface SwarmPiece {
+    node: Node;
+    target: Vec3;
+    exit: Vec3;
+    delay: number;
+}
 
 /** Inspector data for one playable phase. */
 @ccclass('PhaseData')
@@ -55,6 +65,45 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
     @property({ min: 0.01, tooltip: 'How long the Object Transition overlay is visible.' })
     public phaseTransitionObjectDuration = 1.5;
+
+    // ---------- Sprite Swarm transition ----------
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, type: SpriteFrame, tooltip: 'Sprite được nhân bản để che màn hình khi chuyển phase.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmSpriteFrame: SpriteFrame | null = null;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, type: Node, tooltip: 'Node chứa các sprite (nên là con trên cùng của Canvas). Trống = tự tạo dưới Canvas.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmLayer: Node | null = null;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 10, tooltip: 'Cỡ mỗi sprite (px, cạnh rộng).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmSpriteSize = 320;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, range: [0.3, 1, 0.05], slide: true, tooltip: 'Khoảng cách lưới / cỡ sprite. Nhỏ hơn = chồng lên nhau nhiều hơn, che kín hơn.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmSpacing = 0.4;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0, tooltip: 'Phủ rộng thêm ra ngoài màn hình (px) cho chắc không hở mép.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmMargin = 150;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, tooltip: 'Scale ngẫu nhiên mỗi sprite (min, max).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmScaleRange = new Vec3(0.9, 1.3, 0);
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, tooltip: 'Xoay ngẫu nhiên mỗi sprite.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmRandomRotation = true;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0.05, tooltip: 'Thời gian mỗi sprite bay vào (giây).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmInDuration = 0.5;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0, tooltip: 'Độ lệch thời gian ngẫu nhiên giữa các sprite (giây).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmStagger = 0.35;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0, tooltip: 'Giữ che kín bao lâu (giây) trước khi bay ra.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmHold = 0.2;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0.05, tooltip: 'Thời gian mỗi sprite bay ra (giây).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmOutDuration = 0.5;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 1, step: 1, tooltip: 'Giới hạn số sprite tối đa (an toàn hiệu năng).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmMaxSprites = 500;
+
+    private swarmPieces: SwarmPiece[] = [];
 
     @property({ readonly: true })
     public currentPhaseIndex = 0;
@@ -206,6 +255,10 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
             return;
         }
 
+        if (this.transitionType === PhaseTransitionType.SpriteSwarm && this.swarmSpriteFrame && this.playSwarmTransition()) {
+            return;
+        }
+
         this.slideToNextPhase();
     }
 
@@ -261,6 +314,161 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
             .start();
     }
 
+    // =========================================================
+    // SPRITE SWARM TRANSITION
+    // =========================================================
+
+    /** Returns false when there is no Canvas to draw on (the caller then slides instead). */
+    private playSwarmTransition(): boolean {
+        const layer = this.getSwarmLayer();
+        const layerTransform = layer?.getComponent(UITransform);
+        const canvasTransform = this.findCanvas()?.getComponent(UITransform);
+        if (!layer || !layerTransform || !canvasTransform) return false;
+
+        this.clearSwarm();
+        layer.active = true;
+        layer.setSiblingIndex(layer.parent ? layer.parent.children.length - 1 : 0);
+
+        // Visible screen in the layer's local space, whatever the device ratio.
+        const screen = canvasTransform.getBoundingBoxToWorld();
+        const min = layerTransform.convertToNodeSpaceAR(new Vec3(screen.xMin, screen.yMin, 0));
+        const max = layerTransform.convertToNodeSpaceAR(new Vec3(screen.xMax, screen.yMax, 0));
+        const margin = this.swarmMargin;
+        const left = Math.min(min.x, max.x) - margin;
+        const right = Math.max(min.x, max.x) + margin;
+        const bottom = Math.min(min.y, max.y) - margin;
+        const top = Math.max(min.y, max.y) + margin;
+        const midX = (left + right) * 0.5;
+
+        let size = Math.max(10, this.swarmSpriteSize);
+        let cell = size * Math.max(0.3, this.swarmSpacing);
+        let cols = Math.ceil((right - left) / cell) + 1;
+        let rows = Math.ceil((top - bottom) / cell) + 1;
+        // Wide screens (fold, landscape) would need more sprites than the budget:
+        // grow the sprites and the grid together so the cover stays as dense.
+        const budget = Math.max(1, this.swarmMaxSprites);
+        if (cols * rows > budget) {
+            const grow = Math.sqrt((cols * rows) / budget) * 1.05;
+            size *= grow;
+            cell *= grow;
+            cols = Math.ceil((right - left) / cell) + 1;
+            rows = Math.ceil((top - bottom) / cell) + 1;
+        }
+
+        const frame = this.swarmSpriteFrame!;
+        const aspect = frame.rect.height > 0 ? frame.rect.height / frame.rect.width : 1;
+        const width = right - left;
+        const cells: Vec3[] = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const jitter = cell * 0.25;
+                cells.push(new Vec3(
+                    left + c * cell + (Math.random() * 2 - 1) * jitter,
+                    bottom + r * cell + (Math.random() * 2 - 1) * jitter,
+                    0,
+                ));
+            }
+        }
+        // Random draw order so the pile looks natural.
+        cells.sort(() => Math.random() - 0.5);
+
+        for (const target of cells.slice(0, this.swarmMaxSprites)) {
+            const fromLeft = target.x < midX;
+            const offset = width * 0.5 + size + Math.random() * size;
+            const start = new Vec3(fromLeft ? left - offset + (target.x - left) * 0.3 : right + offset - (right - target.x) * 0.3, target.y, 0);
+            const exit = new Vec3(fromLeft ? left - size * 1.5 - Math.random() * size : right + size * 1.5 + Math.random() * size, target.y + (Math.random() * 2 - 1) * size * 0.3, 0);
+
+            const node = new Node('SwarmSprite');
+            node.layer = layer.layer;
+            const transform = node.addComponent(UITransform);
+            transform.setContentSize(size, size * aspect);
+            const sprite = node.addComponent(Sprite);
+            sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+            sprite.spriteFrame = frame;
+            const range = this.swarmScaleRange;
+            const scale = range.x + Math.random() * Math.max(0, range.y - range.x);
+            node.setScale(scale, scale, 1);
+            if (this.swarmRandomRotation) node.angle = Math.random() * 360;
+            node.setParent(layer);
+            node.setPosition(start);
+
+            this.swarmPieces.push({ node, target, exit, delay: Math.random() * this.swarmStagger });
+        }
+
+        const pieces = this.swarmPieces;
+        let arrived = 0;
+        for (const piece of pieces) {
+            tween(piece.node)
+                .delay(piece.delay)
+                .to(this.swarmInDuration, { position: piece.target }, { easing: 'quadOut' })
+                .call(() => {
+                    if (++arrived === pieces.length) this.onSwarmCovered(layer);
+                })
+                .start();
+        }
+        if (pieces.length === 0) this.onSwarmCovered(layer);
+        return true;
+    }
+
+    /** The screen is hidden: swap the phases, then let the swarm fly back out to both sides. */
+    private onSwarmCovered(layer: Node): void {
+        this.transitionTween = tween(layer)
+            .delay(this.swarmHold)
+            .call(() => {
+                this.switchPhaseImmediately();
+                const pieces = this.swarmPieces;
+                let gone = 0;
+                for (const piece of pieces) {
+                    tween(piece.node)
+                        .delay(Math.random() * this.swarmStagger)
+                        .to(this.swarmOutDuration, { position: piece.exit }, { easing: 'quadIn' })
+                        .call(() => {
+                            if (++gone !== pieces.length) return;
+                            this.clearSwarm();
+                            this.completeTransition();
+                        })
+                        .start();
+                }
+                if (pieces.length === 0) this.completeTransition();
+            })
+            .start();
+    }
+
+    private clearSwarm(): void {
+        for (const piece of this.swarmPieces) {
+            Tween.stopAllByTarget(piece.node);
+            if (piece.node.isValid) piece.node.destroy();
+        }
+        this.swarmPieces = [];
+    }
+
+    private getSwarmLayer(): Node | null {
+        if (this.swarmLayer?.isValid) {
+            if (!this.swarmLayer.getComponent(UITransform)) this.swarmLayer.addComponent(UITransform);
+            return this.swarmLayer;
+        }
+
+        const canvas = this.findCanvas();
+        if (!canvas) return null;
+        const layer = new Node('PhaseSwarmLayer');
+        layer.layer = canvas.layer;
+        layer.addComponent(UITransform);
+        layer.setParent(canvas);
+        this.swarmLayer = layer;
+        return layer;
+    }
+
+    private findCanvas(): Node | null {
+        if (this.swarmLayer?.isValid) {
+            let node: Node | null = this.swarmLayer;
+            while (node) {
+                if (node.getComponent(Canvas)) return node;
+                node = node.parent;
+            }
+        }
+        return this.node.scene?.getComponentInChildren(Canvas)?.node ?? null;
+    }
+
     private switchPhaseImmediately(): void {
         const oldNode = this.CurrentPhaseObject;
         this.currentPhaseIndex++;
@@ -306,6 +514,7 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
         this.outgoingTween?.stop();
         this.incomingTween?.stop();
         this.transitionTween?.stop();
+        this.clearSwarm();
         this.delayTween = null;
         this.outgoingTween = null;
         this.incomingTween = null;

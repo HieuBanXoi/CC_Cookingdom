@@ -3008,11 +3008,9 @@
     "scaleOnMove": false,
     "endScaleMultiplier": 1,
     "setParentToTarget": true,
-    "onComplete": [
-      {
-        "__id__": 142
-      }
-    ],
+    "onComplete": {
+      "__id__": 840
+    },
     "playMoveToTargetFinishSound": false,
     "moveToTargetFinishFxType": 1,
     "lockInputWhileMoving": true,
@@ -22582,5 +22580,20 @@
     "fileId": "cf3zY/Z/JFvoDXfg/fKEXe",
     "instance": null,
     "targetOverrides": null
+  },
+  {
+    "__type__": "Ply_EventCall",
+    "eventHandler": {
+      "__id__": 142
+    },
+    "nodeParam": null
+  },
+  {
+    "__type__": "Ply_Event",
+    "calls": [
+      {
+        "__id__": 839
+      }
+    ]
   }
 ]

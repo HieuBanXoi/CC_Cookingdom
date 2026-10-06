@@ -1,10 +1,10 @@
 import { _decorator, EventTouch, Input, input, Node, UITransform, Vec2, Vec3 } from 'cc';
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { GameManager } from './GameManager';
-import { ItemDraggable } from '../Gameplay/Items/ItemDraggable';
-import { Item } from '../Gameplay/Items/Item';
-import { ItemStirring } from '../Gameplay/Items/ItemStirring';
-import { ItemClickable } from '../Gameplay/Items/ItemClickable';
+import { ItemDraggable } from '../Gameplay/Items/Common/ItemDraggable';
+import { Item } from '../Gameplay/Items/Common/Item';
+import { ItemStirring } from '../Gameplay/Items/Common/ItemStirring';
+import { ItemClickable } from '../Gameplay/Items/Common/ItemClickable';
 import { ui } from './UI';
 import { Ply_SoundManager } from './Ply_SoundManager';
 const { ccclass, property } = _decorator;
