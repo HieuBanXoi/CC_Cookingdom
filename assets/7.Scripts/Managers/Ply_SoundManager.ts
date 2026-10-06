@@ -37,7 +37,8 @@ export enum FxType {
     Cat,
     WaterDrop,
     WaterOut,
-    ClockTick
+    ClockTick,
+    MicrowaveComplete
 }
 Enum(FxType);
 

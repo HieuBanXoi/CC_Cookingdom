@@ -54,7 +54,9 @@ export class ItemSound extends Ply_EventHandlerComponent {
     public PlayCreamSound() {
         this.PlaySoundFX(FxType.Cream);
     }
-
+    public PlayCreamWipingSound() {
+        this.PlaySoundFX(FxType.CreamWiping);
+    }
 
     public PlayLeafToDishSound() {
         this.PlaySoundFX(FxType.PlaceVege);
@@ -76,9 +78,6 @@ export class ItemSound extends Ply_EventHandlerComponent {
         this.PlaySoundFX(FxType.Click);
     }
 
-    public PlayCreamWipingSound() {
-        this.PlaySoundFX(FxType.CreamWiping);
-    }
 
     public PlayItemPlaceSound() {
         this.PlaySoundFX(FxType.ItemPlace);

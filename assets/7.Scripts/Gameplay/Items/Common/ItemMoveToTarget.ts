@@ -1,7 +1,8 @@
-import { _decorator, Node, Tween, tween, Vec2, Vec3, Enum, EventHandler } from 'cc';
+import { _decorator, Node, Tween, tween, Vec2, Vec3, Enum } from 'cc';
 import { GameManager } from '../../../Managers/GameManager';
 import { Item } from './Item';
 import { Ply_EventHandlerComponent } from '../../../Core/Base/Ply_EventHandlerComponent';
+import { Ply_Event } from '../../../Core/Base/Ply_Event';
 import { FxType, Ply_SoundManager } from '../../../Managers/Ply_SoundManager';
 
 const { ccclass, property } = _decorator;
@@ -20,61 +21,111 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
     /** Emitted on this node after a move has completed. The target Node is passed as the event argument. */
     public static readonly EVENT_COMPLETE = 'item-move-to-target-complete';
 
-    @property(Node)
+    // ---------- Chung (luôn hiện) ----------
+    @property({ type: Node, tooltip: 'Đích mặc định (HandTut cũng kéo tới đây). Nếu Item đích có knifePos thì bay tới knifePos.' })
     public defaultTarget: Node = null!;
 
-    @property
-    public duration: number = 0.5;
-
-    @property({ type: Enum(MoveType) })
+    @property({ type: Enum(MoveType), tooltip: 'Smooth: trượt mượt · Jump: nhảy theo cung · Instant: dịch ngay · ShakeThenMove: lắc rồi trượt.' })
     public moveType: MoveType = MoveType.Smooth;
 
-    @property({ tooltip: 'Độ cao cung nhảy UI theo pixel. Nên dùng khoảng 80-200.' })
+    @property({ min: 0, tooltip: 'Thời gian di chuyển (giây).', visible: function (this: ItemMoveToTarget) { return this.moveType !== MoveType.Instant || this.scaleOnMove; } })
+    public duration: number = 0.5;
+
+    // ---------- Tab: Move ----------
+    @property({ group: { name: 'Move', id: 'mtt', displayOrder: 0 }, tooltip: 'Độ cao cung nhảy UI theo pixel. Nên dùng khoảng 80-200.', visible: function (this: ItemMoveToTarget) { return this.moveType === MoveType.Jump; } })
     public jumpPower: number = 120;
 
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, min: 1, tooltip: 'Số lần nảy trên đường bay.', visible: function (this: ItemMoveToTarget) { return this.moveType === MoveType.Jump; } })
     public numJumps: number = 1;
 
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, tooltip: 'Xoay item trong lúc nhảy.', visible: function (this: ItemMoveToTarget) { return this.moveType === MoveType.Jump; } })
     public rotate360DuringJump: boolean = false;
 
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, tooltip: 'Đảo chiều xoay.', visible: function (this: ItemMoveToTarget) { return this.moveType === MoveType.Jump && this.rotate360DuringJump; } })
     public flipRotate: boolean = false;
 
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, tooltip: 'Góc xoay cộng thêm trong lúc nhảy (độ).', visible: function (this: ItemMoveToTarget) { return this.moveType === MoveType.Jump && this.rotate360DuringJump; } })
     public angleRotate: number = -360;
 
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, tooltip: 'Scale item trong lúc di chuyển.' })
     public scaleOnMove: boolean = false;
 
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, min: 0, tooltip: 'Scale cuối = scale hiện tại × giá trị này.', visible: function (this: ItemMoveToTarget) { return this.scaleOnMove; } })
     public endScaleMultiplier: number = 1.0;
 
-    @property
-    public setParentToTarget: boolean = true;
-
-    @property({ type: [EventHandler], tooltip: 'On move complete event handlers' })
-    public onComplete: EventHandler[] = [];
-
-    @property
-    public playMoveToTargetFinishSound: boolean = false;
-
-    @property({ type: Enum(FxType) })
-    public moveToTargetFinishFxType: FxType = FxType.Complete;
-
-    @property
+    @property({ group: { name: 'Move', id: 'mtt' }, tooltip: 'Khoá input (GameManager.isPlaying = false) trong lúc di chuyển.' })
     public lockInputWhileMoving: boolean = true;
 
-    @property({ tooltip: 'Restore the original parent once the move finishes. While moving the item stays where it is (e.g. under InputManager.draggingNode) so it renders above the drop target.' })
+    // ---------- Tab: Punch ----------
+    @property({ group: { name: 'Punch', id: 'mtt', displayOrder: 1 }, tooltip: 'Nảy scale (punch) khi tới target.' })
+    public punchOnComplete: boolean = false;
+
+    @property({ group: { name: 'Punch', id: 'mtt' }, min: 0, step: 0.05, tooltip: 'Nhịp 1: X dài ra và Y co lại bao nhiêu (0.15 = 15%).', visible: function (this: ItemMoveToTarget) { return this.punchOnComplete; } })
+    public punchStrength: number = 0.15;
+
+    @property({ group: { name: 'Punch', id: 'mtt' }, min: 0.01, tooltip: 'Tổng thời gian punch (giây).', visible: function (this: ItemMoveToTarget) { return this.punchOnComplete; } })
+    public punchDuration: number = 0.3;
+
+    @property({ group: { name: 'Punch', id: 'mtt' }, range: [0, 1, 0.05], slide: true, tooltip: 'Nhịp 2: Y dãn ra và X co lại, tính theo Punch Strength (1 = bằng nhịp 1).', visible: function (this: ItemMoveToTarget) { return this.punchOnComplete; } })
+    public punchElasticity: number = 0.4;
+
+    @property({ group: { name: 'Punch', id: 'mtt' }, range: [0, 1, 0.05], slide: true, tooltip: 'Bắt đầu punch khi đã đi được bao nhiêu quãng đường (0.9 = 90%). Instant thì punch lúc tới nơi.', visible: function (this: ItemMoveToTarget) { return this.punchOnComplete; } })
+    public punchStartProgress: number = 0.9;
+
+    @property({ group: { name: 'Punch', id: 'mtt' }, tooltip: 'Bật: chờ punch xong mới mở input và bắn sự kiện complete. Tắt: punch chạy song song với sự kiện complete.', visible: function (this: ItemMoveToTarget) { return this.punchOnComplete; } })
+    public waitPunchBeforeComplete: boolean = false;
+
+    // ---------- Tab: Finish ----------
+    @property({ group: { name: 'Finish', id: 'mtt', displayOrder: 2 }, tooltip: 'Tới nơi thì set parent của item thành target.' })
+    public setParentToTarget: boolean = true;
+
+    @property({ group: { name: 'Finish', id: 'mtt' }, tooltip: 'Restore the original parent once the move finishes. While moving the item stays where it is (e.g. under InputManager.draggingNode) so it renders above the drop target.', visible: function (this: ItemMoveToTarget) { return !this.setParentToTarget; } })
     public resetParentBeforeMove: boolean = true;
 
-    @property({ tooltip: 'Tắt component này sau khi move tới target xong (HandTut sẽ không chọn item này nữa).' })
+    @property({ group: { name: 'Finish', id: 'mtt' }, tooltip: 'Tắt component này sau khi move tới target xong (HandTut sẽ không chọn item này nữa).' })
     public disableOnComplete: boolean = false;
 
+    @property({ group: { name: 'Finish', id: 'mtt' }, tooltip: 'Phát âm thanh khi tới target.' })
+    public playMoveToTargetFinishSound: boolean = false;
+
+    @property({ group: { name: 'Finish', id: 'mtt' }, type: Enum(FxType), visible: function (this: ItemMoveToTarget) { return this.playMoveToTargetFinishSound; } })
+    public moveToTargetFinishFxType: FxType = FxType.Complete;
+
+    // ---------- Tab: Events ----------
+    @property({ group: { name: 'Events', id: 'mtt', displayOrder: 3 }, type: Ply_Event, tooltip: 'Gọi khi move tới target xong (truyền target Node). Trong code dùng onComplete.addListener() hoặc node.on(EVENT_COMPLETE).' })
+    public onComplete: Ply_Event = new Ply_Event();
+
     private originalParent: Node | null = null;
+    private readonly punchState = { progress: 0 };
+    private readonly scaleState = { t: 0 };
+    /** World scale the punch squashes around and returns to. */
+    private punchBaseScale: Vec3 | null = null;
+    private punchPending = false;
+    private punching = false;
+    private punchWaiters: Array<() => void> = [];
+
+    /** True from the moment a punch is scheduled until it has finished. */
+    public get IsPunching(): boolean {
+        return this.punchPending || this.punching;
+    }
+
+    /** Runs `callback` once the current punch ends, or right away when there is none. */
+    public WhenPunchDone(callback: () => void): void {
+        if (this.IsPunching) this.punchWaiters.push(callback);
+        else callback();
+    }
 
     protected onLoad() {
         this.originalParent = this.node.parent;
+        this.EnsureCompleteEvent();
+    }
+
+    /** Old scenes/prefabs serialized onComplete as an EventHandler[]; replace that with a Ply_Event. */
+    private EnsureCompleteEvent(): Ply_Event {
+        if (!(this.onComplete instanceof Ply_Event)) {
+            this.onComplete = new Ply_Event();
+        }
+        return this.onComplete;
     }
 
     /** Re-caches the parent restored after a move. Call after intentionally reparenting the item. */
@@ -86,7 +137,7 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         this.ExecuteMove2D(this.defaultTarget);
     }
 
-    /** Kept for existing EventHandler bindings. Movement is now UI 2D. */
+    /** Kept for existing Inspector bindings. Movement is now UI 2D. */
     public ExecuteMove3D(customTarget: Node | null) {
         this.ExecuteMove2D(customTarget);
     }
@@ -107,14 +158,38 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         }
 
         Tween.stopAllByTarget(this.node);
+        Tween.stopAllByTarget(this.scaleState);
+        this.StopPunch();
 
         if (this.lockInputWhileMoving && GameManager.Ins) {
             GameManager.Ins.isPlaying = false;
         }
 
+        // World scale the item ends the move with: the punch squashes around it.
+        const endWorldScale = this.node.worldScale.clone();
         if (this.scaleOnMove) {
-            const targetScale = this.node.scale.clone().multiplyScalar(this.endScaleMultiplier);
-            tween(this.node).to(this.duration, { scale: targetScale }, { easing: 'quadOut' }).start();
+            endWorldScale.multiplyScalar(this.endScaleMultiplier);
+            endWorldScale.z = this.node.worldScale.z;
+            const from = this.node.scale.clone();
+            const to = from.clone().multiplyScalar(this.endScaleMultiplier);
+            to.z = from.z;
+            const current = new Vec3();
+            this.scaleState.t = 0;
+            tween(this.scaleState)
+                .to(this.duration, { t: 1 }, {
+                    easing: 'quadOut',
+                    onUpdate: () => this.node.setScale(Vec3.lerp(current, from, to, this.scaleState.t)),
+                })
+                .start();
+        }
+
+        if (this.punchOnComplete && this.moveType !== MoveType.Instant) {
+            const lead = this.moveType === MoveType.ShakeThenMove ? 0.3 : 0;
+            this.punchPending = true;
+            tween(this.punchState)
+                .delay(lead + this.duration * this.punchStartProgress)
+                .call(() => this.StartPunch(endWorldScale))
+                .start();
         }
 
         switch (this.moveType) {
@@ -183,12 +258,23 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
             this.SetParentPreservingWorldTransform(this.originalParent);
         }
 
-        if (this.lockInputWhileMoving && GameManager.Ins) {
-            GameManager.Ins.isPlaying = true;
-        }
-
         if (this.playMoveToTargetFinishSound) {
             Ply_SoundManager.Ins.PlayFx(this.moveToTargetFinishFxType);
+        }
+
+        // Instant moves (or a punch scheduled past the end) punch on arrival.
+        if (this.punchOnComplete && !this.IsPunching) this.StartPunch(this.node.worldScale.clone());
+
+        if (this.punchOnComplete && this.waitPunchBeforeComplete) {
+            this.WhenPunchDone(() => this.CompleteMove(target));
+        } else {
+            this.CompleteMove(target);
+        }
+    }
+
+    private CompleteMove(target: Node | null) {
+        if (this.lockInputWhileMoving && GameManager.Ins) {
+            GameManager.Ins.isPlaying = true;
         }
 
         // Disable before emitting so complete listeners can re-enable it if needed.
@@ -199,7 +285,74 @@ export class ItemMoveToTarget extends Ply_EventHandlerComponent {
         // Code listeners (Knife, Spatula, ...) run before Inspector handlers so an
         // Inspector "Deactivate"/"DisableComponent" cannot unsubscribe them first.
         this.node.emit(ItemMoveToTarget.EVENT_COMPLETE, target);
-        EventHandler.emitEvents(this.onComplete);
+        this.EnsureCompleteEvent().invoke(target);
+    }
+
+    /** Bindable from a Ply_Event: plays the punch now (works even if punchOnComplete is off). */
+    public PlayPunch(onFinish?: () => void): void {
+        this.StopPunch();
+        // Ply_Event/EventHandler bindings pass customEventData here, not a callback.
+        if (typeof onFinish === 'function') this.punchWaiters.push(onFinish);
+        this.StartPunch(this.node.worldScale.clone());
+    }
+
+    /**
+     * Squash & stretch around `baseWorldScale`: X stretches while Y squeezes,
+     * then Y stretches while X squeezes, then back. Uses world scale so the
+     * reparent on arrival does not make the scale jump mid-punch.
+     */
+    private StartPunch(baseWorldScale: Vec3): void {
+        // A scale-on-move tween still running would fight the punch: it already
+        // aims at the base scale, so just stop it.
+        Tween.stopAllByTarget(this.scaleState);
+        Tween.stopAllByTarget(this.punchState);
+        this.punchPending = false;
+        this.punching = true;
+
+        const base = baseWorldScale.clone();
+        this.punchBaseScale = base;
+        const s1 = this.punchStrength;
+        const s2 = this.punchStrength * this.punchElasticity;
+        const state = this.punchState;
+        state.progress = 0;
+
+        // progress 0 -> 1 -> 2 -> 3: base -> (X+s1, Y-s1) -> (X-s2, Y+s2) -> base.
+        const keys: Array<[number, number]> = [[0, 0], [s1, -s1], [-s2, s2], [0, 0]];
+        const apply = () => {
+            const p = Math.min(3, Math.max(0, state.progress));
+            const i = Math.min(2, Math.floor(p));
+            const t = p - i;
+            const ox = keys[i][0] + (keys[i + 1][0] - keys[i][0]) * t;
+            const oy = keys[i][1] + (keys[i + 1][1] - keys[i][1]) * t;
+            this.node.setWorldScale(base.x * (1 + ox), base.y * (1 + oy), base.z);
+        };
+        const d = this.punchDuration;
+
+        tween(state)
+            .to(d * 0.35, { progress: 1 }, { easing: 'quadOut', onUpdate: apply })
+            .to(d * 0.35, { progress: 2 }, { easing: 'sineInOut', onUpdate: apply })
+            .to(d * 0.3, { progress: 3 }, { easing: 'quadOut', onUpdate: apply })
+            .call(() => this.EndPunch())
+            .start();
+    }
+
+    private EndPunch(): void {
+        if (this.punchBaseScale) this.node.setWorldScale(this.punchBaseScale);
+        this.punchBaseScale = null;
+        this.punching = false;
+        const waiters = this.punchWaiters;
+        this.punchWaiters = [];
+        for (const waiter of waiters) waiter();
+    }
+
+    /** Stops a scheduled or running punch and restores its base scale. Pending waiters are dropped. */
+    public StopPunch(): void {
+        Tween.stopAllByTarget(this.punchState);
+        if (this.punchBaseScale) this.node.setWorldScale(this.punchBaseScale);
+        this.punchBaseScale = null;
+        this.punchPending = false;
+        this.punching = false;
+        this.punchWaiters = [];
     }
 
     public TeleportToTarget(t: Node) {

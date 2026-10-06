@@ -9,49 +9,53 @@ const { ccclass, property } = _decorator;
 @ccclass('ItemStirring')
 export class ItemStirring extends Ply_EventHandlerComponent {
 
-    @property
-    public stirRadius: number = 200;
-
-    @property(Node)
+    // ---------- Chung (luôn hiện) ----------
+    @property({ type: Node, tooltip: 'Node cái muôi/que khuấy đi theo ngón tay.' })
     public stirrerTransform: Node = null!;
 
-    @property(Node)
+    @property({ type: Node, tooltip: 'Tâm vùng khuấy. Trống = node này.' })
     public centerPoint: Node = null!;
 
-    @property({ type: Sprite, tooltip: 'Sprite whose appearance changes while stirring. If empty, the first Sprite on this node is used.' })
-    public stateSprite: Sprite | null = null;
+    @property({ min: 0, tooltip: 'Bán kính tối đa que khuấy được rời khỏi tâm (pixel).' })
+    public stirRadius: number = 200;
 
-    @property({ type: SpriteFrame, tooltip: 'Sprite shown while the player is stirring.' })
-    public stirringSpriteFrame: SpriteFrame | null = null;
-
-    @property({ type: SpriteFrame, tooltip: 'Sprite shown before stirring and after stirring completes.' })
-    public idleSpriteFrame: SpriteFrame | null = null;
-
-    @property({ type: Animation, tooltip: 'Animation used as stirring progress. If empty, the Animation on stirrerTransform is used.' })
-    public stirAnimation: Animation | null = null;
-
-    @property({ tooltip: 'Clip to play. Leave empty to use the first clip on Stir Animation.' })
-    public stirAnimationClipName: string = '';
-
-    @property({ type: animation.AnimationController, tooltip: 'Optional Animation Controller used instead of Stir Animation.' })
+    // ---------- Tab: Animation ----------
+    @property({ group: { name: 'Animation', id: 'stir', displayOrder: 0 }, type: animation.AnimationController, tooltip: 'Optional Animation Controller used instead of Stir Animation.' })
     public stirAnimationController: animation.AnimationController | null = null;
 
-    @property({ tooltip: 'Trigger set on Stir Animation Controller when stirring begins.' })
+    @property({ group: { name: 'Animation', id: 'stir' }, tooltip: 'Trigger set on Stir Animation Controller when stirring begins.', visible: function (this: ItemStirring) { return !!this.stirAnimationController; } })
     public stirControllerTrigger: string = '';
 
-    @property({ min: 0.01, tooltip: 'Slowest speed while the player is holding the stirring interaction.' })
+    @property({ group: { name: 'Animation', id: 'stir' }, type: Animation, tooltip: 'Animation used as stirring progress. If empty, the Animation on stirrerTransform is used.', visible: function (this: ItemStirring) { return !this.stirAnimationController; } })
+    public stirAnimation: Animation | null = null;
+
+    @property({ group: { name: 'Animation', id: 'stir' }, tooltip: 'Clip to play. Leave empty to use the first clip on Stir Animation.', visible: function (this: ItemStirring) { return !this.stirAnimationController; } })
+    public stirAnimationClipName: string = '';
+
+    @property({ group: { name: 'Animation', id: 'stir' }, min: 0.01, tooltip: 'Slowest speed while the player is holding the stirring interaction.' })
     public minAnimationSpeed: number = 0.1;
 
-    @property({ min: 0.01, tooltip: 'Fastest allowed stirring animation speed.' })
+    @property({ group: { name: 'Animation', id: 'stir' }, min: 0.01, tooltip: 'Fastest allowed stirring animation speed.' })
     public maxAnimationSpeed: number = 1;
 
-    @property({ min: 0.0001, tooltip: 'Touch movement in pixels converted to animation speed.' })
+    @property({ group: { name: 'Animation', id: 'stir' }, min: 0.0001, tooltip: 'Touch movement in pixels converted to animation speed.' })
     public dragToAnimationSpeed: number = 0.05;
 
-    @property({ type: Ply_Event, tooltip: 'On stir begin event' })
+    // ---------- Tab: Sprite ----------
+    @property({ group: { name: 'Sprite', id: 'stir', displayOrder: 1 }, type: Sprite, tooltip: 'Sprite whose appearance changes while stirring. If empty, the first Sprite on this node is used.' })
+    public stateSprite: Sprite | null = null;
+
+    @property({ group: { name: 'Sprite', id: 'stir' }, type: SpriteFrame, tooltip: 'Sprite shown while the player is stirring.' })
+    public stirringSpriteFrame: SpriteFrame | null = null;
+
+    @property({ group: { name: 'Sprite', id: 'stir' }, type: SpriteFrame, tooltip: 'Sprite shown before stirring and after stirring completes.' })
+    public idleSpriteFrame: SpriteFrame | null = null;
+
+    // ---------- Tab: Events ----------
+    @property({ group: { name: 'Events', id: 'stir', displayOrder: 2 }, type: Ply_Event, tooltip: 'On stir begin event' })
     public onStirBegin: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event, tooltip: 'On stir complete event' })
+    @property({ group: { name: 'Events', id: 'stir' }, type: Ply_Event, tooltip: 'On stir complete event' })
     public onStirComplete: Ply_Event = new Ply_Event();
 
     private isDone: boolean = false;

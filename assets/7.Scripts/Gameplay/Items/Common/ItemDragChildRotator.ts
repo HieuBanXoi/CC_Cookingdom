@@ -35,7 +35,7 @@ export class ItemDragChildRotator extends Ply_EventHandlerComponent {
     @property({ min: 0, tooltip: 'Rotation tween duration, in seconds.' })
     public rotateDuration = 0.15;
 
-    @property({ type: Enum(DragRotationEase) })
+    @property({ type: Enum(DragRotationEase), tooltip: 'Easing của tween xoay.', visible: function (this: ItemDragChildRotator) { return this.rotateDuration > 0; } })
     public rotateEase: DragRotationEase = DragRotationEase.QuadOut;
 
     private itemDraggable: ItemDraggable | null = null;

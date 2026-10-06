@@ -8,22 +8,22 @@ const { ccclass, property } = _decorator;
 @ccclass('ItemClickable')
 export class ItemClickable extends Ply_EventHandlerComponent {
 
-    @property
-    public requiredClicks: number = 1;
+    @property({ tooltip: 'Cho phép click (HandTut chỉ gợi ý click khi bật).' })
+    public canClick: boolean = true;
 
     @property({ tooltip: 'If true, clicking only checks canClick and always triggers onClick event without counting requiredClicks' })
     public infiniteClick: boolean = false;
 
-    @property
-    public canClick: boolean = true;
+    @property({ min: 1, tooltip: 'Số lần click để bắn On Click Complete.', visible: function (this: ItemClickable) { return !this.infiniteClick; } })
+    public requiredClicks: number = 1;
 
-    @property({ tooltip: 'Disable clicking after click until EnableClick() is called (ignored if infiniteClick is true)' })
+    @property({ tooltip: 'Disable clicking after click until EnableClick() is called (ignored if infiniteClick is true)', visible: function (this: ItemClickable) { return !this.infiniteClick; } })
     public disableAfterClick: boolean = false;
 
-    @property({ type: Ply_Event, tooltip: 'General onClick event' })
+    @property({ group: { name: 'Events', id: 'click' }, type: Ply_Event, tooltip: 'General onClick event' })
     public onClick: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event, tooltip: 'Called when click count reaches requiredClicks' })
+    @property({ group: { name: 'Events', id: 'click' }, type: Ply_Event, tooltip: 'Called when click count reaches requiredClicks', visible: function (this: ItemClickable) { return !this.infiniteClick; } })
     public onClickComplete: Ply_Event = new Ply_Event();
 
     private currentClicks: number = 0;

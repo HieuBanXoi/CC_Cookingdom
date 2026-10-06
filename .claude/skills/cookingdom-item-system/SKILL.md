@@ -13,6 +13,8 @@ Cấu trúc thư mục Items:
   `ItemMoveToTarget`, `ItemStirring`, `ItemSound`, `ItemDragChildRotator`, `ItemDragRaycastTarget`, `ItemToTarget`.
 - `Special/<Nhóm>/` — item đặc thù theo cơ chế: `Cutting/` (thớt, dao, đồ cắt), `Water/` (bồn rửa, đồ ngâm nước),
   `Cooking/` (chảo, xẻng, bát, đĩa, bóc màng), `Trash/` (rác, thùng rác, giấy).
+  `Pizza/` (PizzaKitchen: Flour + thứ tự pizza; Pizza: lăn → các bước nguyên liệu `PizzaStep`/`PizzaIngredientGroup`
+  → lò → khay, `stopGameAfter` để StopGame + clickbait; RollingPin, Spoon extends ItemToTarget, Microwave).
   Item mới đặc thù đặt vào nhóm phù hợp (hoặc tạo nhóm mới trong `Special/`); chỉ đưa vào `Common/` khi tái sử dụng được cho nhiều item.
 
 ## 1. Cấu trúc một Item (bắt buộc)
@@ -26,9 +28,16 @@ Mọi node gameplay tương tác được **luôn** có component `Item` hoặc 
 | `Item` (hoặc subclass) | Luôn luôn | Giữ `itemType`, `isDone`, `onProcess`, ref tới các component dưới |
 | `ItemClickable` | Item cần **click/tap** | Sự kiện: `onClick`, `onClickComplete` (`requiredClicks`, `infiniteClick`, `disableAfterClick`, `canClick`) |
 | `ItemDraggable` | Item cần **drag** | Sự kiện: `onBeginDrag`, `onDropSuccess(targetNode)`, `onDropFail`, `onReturnToStartComplete`. Drop thành công khi thả lên `Item` khác có `itemType === targetItemType` |
-| `ItemMoveToTarget` | **Bắt buộc đi kèm `ItemDraggable`** | `defaultTarget` là đích hand-tut kéo tới; `ExecuteMove()` tween tới target, emit `ItemMoveToTarget.EVENT_COMPLETE` trên node |
+| `ItemMoveToTarget` | **Bắt buộc đi kèm `ItemDraggable`** | `defaultTarget` là đích hand-tut kéo tới; `ExecuteMove()` tween tới target, emit `ItemMoveToTarget.EVENT_COMPLETE` trên node rồi gọi Ply_Event `onComplete(targetNode)` |
 | `ItemStirring` | Item cần khuấy/xoay | Sự kiện `onStirComplete`; HandTut dùng `IsDone` |
 | `ItemSound` | Tuỳ chọn | Âm thanh riêng của item |
+
+`ItemMoveToTarget` có tab **Punch** (`punchOnComplete`, `punchStrength`, `punchDuration`, `punchElasticity`,
+`waitPunchBeforeComplete`) để nảy scale khi tới đích; `PlayPunch()`/`StopPunch()` bind được từ Ply_Event.
+
+Quy ước Inspector cho script trong `Common/`: field quan trọng nhất để ngoài (không group), còn lại chia tab bằng
+`group: { name, id }` (cùng `id` trong 1 script), field phụ thuộc toggle dùng `visible: function (this: X) { return ...; }`.
+Không đổi tên property đã serialize (mất dữ liệu scene/prefab).
 
 **Quy tắc cứng:** thêm `ItemDraggable` ⇒ phải thêm `ItemMoveToTarget` và gán `defaultTarget`.
 Hand-tut cho drag dựa vào cặp `ItemDraggable.targetItemType` + `ItemMoveToTarget.defaultTarget`;

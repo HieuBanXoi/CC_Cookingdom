@@ -29,6 +29,9 @@ export class ClockTimer extends PoolMember {
     private isRunning = false;
     private isClockTickPlaying = false;
 
+    /** Sound played when the countdown ends. Reset to Complete after each run (pooled instance). */
+    public completeFxType: FxType = FxType.Complete;
+
     protected onLoad(): void {
         this.fillSprite ??= this.getComponentInChildren(Sprite);
         this.type = PoolType.ClockTimer;
@@ -36,6 +39,7 @@ export class ClockTimer extends PoolMember {
 
     protected onDisable(): void {
         this.StopTimer();
+        this.completeFxType = FxType.Complete;
     }
 
     /** Starts this pooled timer, optionally parented to a dedicated clock position. */
@@ -103,7 +107,8 @@ export class ClockTimer extends PoolMember {
         this.isRunning = false;
         this.tweenFill = null;
         this.stopClockTickSound();
-        Ply_SoundManager.Ins?.PlayFx(FxType.Complete);
+        Ply_SoundManager.Ins?.PlayFx(this.completeFxType);
+        this.completeFxType = FxType.Complete;
         this.onComplete?.invoke(this);
 
         if (this.despawnOnComplete) {

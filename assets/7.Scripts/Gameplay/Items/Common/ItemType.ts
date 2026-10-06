@@ -15,6 +15,10 @@ export enum ItemType {
     Paper,
     PaperBox,
     FoodWet,
+    MicroWave,
+    Ketchup,
+    Pizza,
+    Tray,
 
 }
 Enum(ItemType);

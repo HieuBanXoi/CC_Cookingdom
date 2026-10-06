@@ -12,67 +12,72 @@ const { ccclass, property } = _decorator;
 @ccclass('ItemDraggable')
 export class ItemDraggable extends Ply_EventHandlerComponent {
 
-    @property
+    // ---------- Chung (luôn hiện) ----------
+    @property({ tooltip: 'Cho phép kéo (HandTut chỉ gợi ý kéo khi bật).' })
     public isDraggable: boolean = true;
 
-    @property(Node)
-    public returnTransform: Node = null!;
-
-    @property
-    public setParentToReturnTransform: boolean = true;
-
-    @property
-    public returnToStartOnDragFailed: boolean = true;
-
-    @property
-    public returnToExactReturnTransformPosition: boolean = true;
-
-    @property
-    public cacheStartPosWhenStart: boolean = false;
-
-    @property({ type: Enum(ItemType) })
+    @property({ type: Enum(ItemType), tooltip: 'Thả thành công khi thả lên Item có itemType này. None = không drop được, không hand-tut.' })
     public targetItemType: ItemType = ItemType.None;
 
-    @property(Node)
-    public shadowObject: Node = null!;
-
-    @property
-    public playReturnToStartFinishSound: boolean = false;
-
-    @property({ type: Enum(FxType) })
-    public returnToStartFinishFxType: FxType = FxType.Failed;
-
-    @property
-    public spawnBreakHeartOnDropFail: boolean = true;
-
-    @property
-    public playBeginDragSound: boolean = true;
-
-    @property({ type: Enum(FxType) })
-    public beginDragFxType: FxType = FxType.Click;
-
-    @property
-    public liftOffset: number = 1.0;
-
-    @property
+    // ---------- Tab: Drag ----------
+    @property({ group: { name: 'Drag', id: 'drag', displayOrder: 0 }, min: 0, tooltip: 'Scale item khi bắt đầu kéo (× scale hiện tại).' })
     public dragScaleMultiplier: number = 1.1;
 
-    @property
+    @property({ group: { name: 'Drag', id: 'drag' }, min: 0, tooltip: 'Thời gian tween scale khi bắt đầu kéo (giây).' })
     public dragScaleDuration: number = 0.15;
 
-    @property({ min: 0, tooltip: 'Break heart on drop fail only if the item was dragged farther than this (world units). A short tap/nudge returns silently.' })
+    @property({ group: { name: 'Drag', id: 'drag' }, type: Node, tooltip: 'Bóng đổ: bật khi kéo, tắt khi thả.' })
+    public shadowObject: Node = null!;
+
+    @property({ group: { name: 'Drag', id: 'drag' }, tooltip: '(Hiện chưa dùng trong code.)' })
+    public liftOffset: number = 1.0;
+
+    // ---------- Tab: Return ----------
+    @property({ group: { name: 'Return', id: 'drag', displayOrder: 1 }, tooltip: 'Thả hỏng thì bay về chỗ cũ.' })
+    public returnToStartOnDragFailed: boolean = true;
+
+    @property({ group: { name: 'Return', id: 'drag' }, type: Node, tooltip: 'Vị trí trả về. Trống = vị trí/parent ban đầu của item.' })
+    public returnTransform: Node = null!;
+
+    @property({ group: { name: 'Return', id: 'drag' }, tooltip: '(Hiện chưa dùng trong code.)', visible: function (this: ItemDraggable) { return !!this.returnTransform; } })
+    public setParentToReturnTransform: boolean = true;
+
+    @property({ group: { name: 'Return', id: 'drag' }, tooltip: '(Hiện chưa dùng trong code.)', visible: function (this: ItemDraggable) { return !!this.returnTransform; } })
+    public returnToExactReturnTransformPosition: boolean = true;
+
+    @property({ group: { name: 'Return', id: 'drag' }, tooltip: 'Lưu vị trí trả về ngay lúc start (thay vì lúc bắt đầu kéo).' })
+    public cacheStartPosWhenStart: boolean = false;
+
+    @property({ group: { name: 'Return', id: 'drag' }, tooltip: 'Hiện tim vỡ khi thả hỏng.' })
+    public spawnBreakHeartOnDropFail: boolean = true;
+
+    @property({ group: { name: 'Return', id: 'drag' }, min: 0, tooltip: 'Break heart on drop fail only if the item was dragged farther than this (world units). A short tap/nudge returns silently.', visible: function (this: ItemDraggable) { return this.spawnBreakHeartOnDropFail; } })
     public minDragDistanceForBreakHeart: number = 30;
 
-    @property({ type: Ply_Event, tooltip: 'On begin drag event' })
+    // ---------- Tab: Sound ----------
+    @property({ group: { name: 'Sound', id: 'drag', displayOrder: 2 }, tooltip: 'Phát âm thanh khi bắt đầu kéo.' })
+    public playBeginDragSound: boolean = true;
+
+    @property({ group: { name: 'Sound', id: 'drag' }, type: Enum(FxType), visible: function (this: ItemDraggable) { return this.playBeginDragSound; } })
+    public beginDragFxType: FxType = FxType.Click;
+
+    @property({ group: { name: 'Sound', id: 'drag' }, tooltip: 'Phát âm thanh khi bay về chỗ cũ xong.' })
+    public playReturnToStartFinishSound: boolean = false;
+
+    @property({ group: { name: 'Sound', id: 'drag' }, type: Enum(FxType), visible: function (this: ItemDraggable) { return this.playReturnToStartFinishSound; } })
+    public returnToStartFinishFxType: FxType = FxType.Failed;
+
+    // ---------- Tab: Events ----------
+    @property({ group: { name: 'Events', id: 'drag', displayOrder: 3 }, type: Ply_Event, tooltip: 'On begin drag event' })
     public onBeginDrag: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event, tooltip: 'On drop success event (Passes target Node)' })
+    @property({ group: { name: 'Events', id: 'drag' }, type: Ply_Event, tooltip: 'On drop success event (Passes target Node)' })
     public onDropSuccess: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event, tooltip: 'On drop fail event' })
+    @property({ group: { name: 'Events', id: 'drag' }, type: Ply_Event, tooltip: 'On drop fail event' })
     public onDropFail: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event, tooltip: 'On return to start complete event' })
+    @property({ group: { name: 'Events', id: 'drag' }, type: Ply_Event, tooltip: 'On return to start complete event' })
     public onReturnToStartComplete: Ply_Event = new Ply_Event();
 
     public item: Item | null = null;

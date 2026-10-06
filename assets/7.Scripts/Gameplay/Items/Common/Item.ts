@@ -33,76 +33,83 @@ export interface HandTutHint {
     to?: Vec3;
     /** path: waypoints (>= 2). */
     path?: Vec3[];
+    /** drag/path: multiplies HandTutManager.moveDuration (> 1 = slower). */
+    durationMultiplier?: number;
 }
 
 @ccclass('Item')
 export class Item extends Ply_GameUnit {
 
-    @property({ tooltip: 'Hand tutorial requirement matching' })
-    public isDone: boolean = false;
-
-    @property
-    public onProcess: boolean = false;
-
-    @property({ tooltip: 'Require matching target type for hand tutorial' })
-    public requireMatchingTargetTypeForHandTut: boolean = false;
-
-    @property({ type: Enum(ItemType) })
+    // ---------- Chung (luôn hiện) ----------
+    @property({ type: Enum(ItemType), tooltip: 'Loại item. Item kéo sẽ thả được lên item này nếu targetItemType khớp.' })
     public itemType: ItemType = ItemType.None;
 
-    @property(Sprite)
+    @property({ type: Sprite, tooltip: 'Sprite chính của item.' })
     public spriteRenderer: Sprite = null!;
 
-    @property({ type: Ply_Event, tooltip: 'Knife in event' })
-    public onKnifeIn: Ply_Event = new Ply_Event();
+    // ---------- Tab: Hand Tut ----------
+    @property({ group: { name: 'Hand Tut', id: 'item', displayOrder: 0 }, tooltip: 'Hand tutorial requirement matching' })
+    public isDone: boolean = false;
 
-    @property({ type: Ply_Event, tooltip: 'Raised by PaperOn(): a dragged Paper swept over this item.' })
-    public onPaperOn: Ply_Event = new Ply_Event();
+    @property({ group: { name: 'Hand Tut', id: 'item' }, tooltip: 'Item đang trong quá trình xử lý: HandTut ưu tiên gợi ý trước.' })
+    public onProcess: boolean = false;
 
-    @property(Node)
-    public knifePos: Node = null!;
+    @property({ group: { name: 'Hand Tut', id: 'item' }, tooltip: 'Require matching target type for hand tutorial' })
+    public requireMatchingTargetTypeForHandTut: boolean = false;
 
-    @property({ type: Node, tooltip: 'Knife node that cuts this item. Set automatically by Knife.SetTarget().' })
-    public knife: Node | null = null;
-
-    @property({ min: 0 })
+    // ---------- Tab: Effects ----------
+    @property({ group: { name: 'Effects', id: 'item', displayOrder: 1 }, min: 0, tooltip: 'Scale hiệu ứng tim.' })
     public heartEffectScale: number = 1.0;
 
-    @property({ min: 0 })
+    @property({ group: { name: 'Effects', id: 'item' }, min: 0, tooltip: 'Scale hiệu ứng tim vỡ.' })
     public breakHeartEffectScale: number = 1.0;
 
-    @property({ min: 0 })
+    @property({ group: { name: 'Effects', id: 'item' }, min: 0, tooltip: 'Scale hiệu ứng blink.' })
     public blinkEffectScale: number = 1.0;
 
-    @property({ tooltip: 'Spawn a break heart when the player taps this item while all its interactions are locked.' })
+    @property({ group: { name: 'Effects', id: 'item' }, tooltip: 'Spawn a break heart when the player taps this item while all its interactions are locked.' })
     public spawnBreakHeartOnBlockedTap: boolean = true;
 
-    @property({ type: Node, tooltip: 'Where SpawnFoodSpark() plays the spark. Empty = this item position.' })
+    @property({ group: { name: 'Effects', id: 'item' }, type: Node, tooltip: 'Where SpawnFoodSpark() plays the spark. Empty = this item position.' })
     public foodSparkSpawnPos: Node | null = null;
 
-    @property({ type: Enum(FoodSparkType), tooltip: 'Food sprite used by SpawnFoodSpark().' })
+    @property({ group: { name: 'Effects', id: 'item' }, type: Enum(FoodSparkType), tooltip: 'Food sprite used by SpawnFoodSpark().' })
     public foodSparkType: FoodSparkType = FoodSparkType.Default;
 
-    // References exposed on Cocos Creator Inspector
-    @property({ type: ItemDraggable, tooltip: 'Cached ItemDraggable reference' })
+    // ---------- Tab: Knife ----------
+    @property({ group: { name: 'Knife', id: 'item', displayOrder: 2 }, type: Node, tooltip: 'Điểm dao/item bay tới khi drop lên item này (ItemMoveToTarget dùng thay vị trí node).' })
+    public knifePos: Node = null!;
+
+    @property({ group: { name: 'Knife', id: 'item' }, type: Node, tooltip: 'Knife node that cuts this item. Set automatically by Knife.SetTarget().' })
+    public knife: Node | null = null;
+
+    // ---------- Tab: Events ----------
+    @property({ group: { name: 'Events', id: 'item', displayOrder: 3 }, type: Ply_Event, tooltip: 'Knife in event' })
+    public onKnifeIn: Ply_Event = new Ply_Event();
+
+    @property({ group: { name: 'Events', id: 'item' }, type: Ply_Event, tooltip: 'Raised by PaperOn(): a dragged Paper swept over this item.' })
+    public onPaperOn: Ply_Event = new Ply_Event();
+
+    // ---------- Tab: Refs (tự cache, xem để kiểm tra) ----------
+    @property({ group: { name: 'Refs', id: 'item', displayOrder: 4 }, type: ItemDraggable, tooltip: 'Cached ItemDraggable reference' })
     public itemDraggable: ItemDraggable | null = null;
 
-    @property({ type: ItemClickable, tooltip: 'Cached ItemClickable reference' })
+    @property({ group: { name: 'Refs', id: 'item' }, type: ItemClickable, tooltip: 'Cached ItemClickable reference' })
     public itemClickable: ItemClickable | null = null;
 
-    @property({ type: ItemStirring, tooltip: 'Cached ItemStirring reference' })
+    @property({ group: { name: 'Refs', id: 'item' }, type: ItemStirring, tooltip: 'Cached ItemStirring reference' })
     public itemStirring: ItemStirring | null = null;
 
-    @property({ type: ItemMoveToTarget, tooltip: 'Cached ItemMoveToTarget reference' })
+    @property({ group: { name: 'Refs', id: 'item' }, type: ItemMoveToTarget, tooltip: 'Cached ItemMoveToTarget reference' })
     public itemMoveToTarget: ItemMoveToTarget | null = null;
 
-    @property({ type: ItemSound, tooltip: 'Cached ItemSound reference' })
+    @property({ group: { name: 'Refs', id: 'item' }, type: ItemSound, tooltip: 'Cached ItemSound reference' })
     public itemSound: ItemSound | null = null;
 
-    @property({ type: Animation, tooltip: 'Cached Animation reference' })
+    @property({ group: { name: 'Refs', id: 'item' }, type: Animation, tooltip: 'Cached Animation reference' })
     public animationComponent: Animation | null = null;
 
-    @property({ type: animation.AnimationController, tooltip: 'Cached AnimationController reference' })
+    @property({ group: { name: 'Refs', id: 'item' }, type: animation.AnimationController, tooltip: 'Cached AnimationController reference' })
     public animationController: animation.AnimationController | null = null;
 
     private activeEffect: PoolMember | null = null;
@@ -381,6 +388,7 @@ export class Item extends Ply_GameUnit {
             Ply_SoundManager.Ins.PlayFx(FxType.Blink);
             this.AttachEffectToItem(blinkEffect);
             this.CacheActiveEffect(blinkEffect);
+            blinkEffect.SetScaleMultiplier(this.blinkEffectScale);
             blinkEffect.DeSpawnByTime();
         }
     }

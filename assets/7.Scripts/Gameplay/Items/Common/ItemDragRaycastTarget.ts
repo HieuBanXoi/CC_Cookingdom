@@ -17,37 +17,41 @@ const { ccclass, property, requireComponent } = _decorator;
 @ccclass('ItemDragRaycastTarget')
 @requireComponent(ItemDraggable)
 export class ItemDragRaycastTarget extends Ply_EventHandlerComponent {
+    // ---------- Chung (luôn hiện) ----------
     @property({ type: Enum(ItemType), tooltip: 'Only Items with this type can be found.' })
     public targetToFind: ItemType = ItemType.None;
-
-    @property({ type: Enum(ItemType), tooltip: 'Accepted drop type while a target is found.' })
-    public targetItemTypeWhenHit: ItemType = ItemType.None;
-
-    @property({ type: Enum(ItemType), tooltip: 'Accepted drop type restored after a failed drop.' })
-    public targetItemTypeOnDropFail: ItemType = ItemType.None;
 
     @property({ type: Node, tooltip: 'Point tested against targets. Uses this item when empty.' })
     public raycastPoint: Node | null = null;
 
-    @property({ tooltip: 'Set ItemMoveToTarget.defaultTarget to the target currently found.' })
-    public updateMoveDefaultTarget: boolean = false;
-
-    @property({ tooltip: 'Only invoke target-found events after the target changes.' })
-    public invokeOnlyWhenTargetChanged: boolean = true;
-
-    @property({ tooltip: 'Allow this component to update the draggable target while dragging.' })
+    // ---------- Tab: Target ----------
+    @property({ group: { name: 'Target', id: 'ray', displayOrder: 0 }, tooltip: 'Allow this component to update the draggable target while dragging. (Có thể bật lúc runtime bằng EnableTarget().)' })
     public targetChangeEnabled: boolean = false;
 
-    @property({ tooltip: 'Restore the configured drop type and default target after a failed drop.' })
-    public restoreTargetOnDropFail: boolean = true;
+    @property({ group: { name: 'Target', id: 'ray' }, type: Enum(ItemType), tooltip: 'Accepted drop type while a target is found.' })
+    public targetItemTypeWhenHit: ItemType = ItemType.None;
 
-    @property({ tooltip: 'Forget the current target as soon as no matching target is under the point.' })
+    @property({ group: { name: 'Target', id: 'ray' }, tooltip: 'Set ItemMoveToTarget.defaultTarget to the target currently found.' })
+    public updateMoveDefaultTarget: boolean = false;
+
+    @property({ group: { name: 'Target', id: 'ray' }, tooltip: 'Only invoke target-found events after the target changes.' })
+    public invokeOnlyWhenTargetChanged: boolean = true;
+
+    @property({ group: { name: 'Target', id: 'ray' }, tooltip: 'Forget the current target as soon as no matching target is under the point.' })
     public resetCurrentTargetOnNoHit: boolean = false;
 
-    @property({ type: Ply_Event, tooltip: 'Invoked when a matching Item is found.' })
+    // ---------- Tab: Drop Fail ----------
+    @property({ group: { name: 'Drop Fail', id: 'ray', displayOrder: 1 }, tooltip: 'Restore the configured drop type and default target after a failed drop.' })
+    public restoreTargetOnDropFail: boolean = true;
+
+    @property({ group: { name: 'Drop Fail', id: 'ray' }, type: Enum(ItemType), tooltip: 'Accepted drop type restored after a failed drop.', visible: function (this: ItemDragRaycastTarget) { return this.restoreTargetOnDropFail; } })
+    public targetItemTypeOnDropFail: ItemType = ItemType.None;
+
+    // ---------- Tab: Events ----------
+    @property({ group: { name: 'Events', id: 'ray', displayOrder: 2 }, type: Ply_Event, tooltip: 'Invoked when a matching Item is found.' })
     public onTargetFound: Ply_Event = new Ply_Event();
 
-    @property({ type: Ply_Event, tooltip: 'Invoked with the matching Item as its argument.' })
+    @property({ group: { name: 'Events', id: 'ray' }, type: Ply_Event, tooltip: 'Invoked with the matching Item as its argument.' })
     public onTargetFoundWithItem: Ply_Event = new Ply_Event();
 
     private isDragging = false;

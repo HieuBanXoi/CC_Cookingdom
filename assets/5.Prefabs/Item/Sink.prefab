@@ -2868,7 +2868,9 @@
     "scaleOnMove": false,
     "endScaleMultiplier": 1,
     "setParentToTarget": true,
-    "onComplete": [],
+    "onComplete": {
+      "__id__": 132
+    },
     "playMoveToTargetFinishSound": false,
     "moveToTargetFinishFxType": 1,
     "lockInputWhileMoving": true,
@@ -2930,5 +2932,9 @@
     },
     "fileId": "d1UQYl/apC+rfRTjBemVAH",
     "targetOverrides": null
+  },
+  {
+    "__type__": "Ply_Event",
+    "calls": []
   }
 ]

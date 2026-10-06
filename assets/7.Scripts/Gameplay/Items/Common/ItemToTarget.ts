@@ -3,6 +3,7 @@ import { HandTutManager } from '../../../Managers/HandTutManager';
 import { Item } from './Item';
 import { ItemMoveToTarget } from './ItemMoveToTarget';
 import { ItemType } from './ItemType';
+import { Ply_Event } from '../../../Core/Base/Ply_Event';
 
 const { ccclass, property } = _decorator;
 
@@ -47,6 +48,9 @@ export class ItemToTarget extends Item {
 
     @property({ tooltip: 'Bật: giữ Target Item Type của ItemDraggable ngay từ đầu. Tắt: lúc start bỏ target (drop không trúng, HandTut bỏ qua) cho tới khi gọi SetTarget().' })
     public setTargetOnStart: boolean = true;
+
+    @property({ type: Ply_Event, tooltip: 'Gọi khi item tới đích (hoặc ngay lúc drop nếu Disable Item When Drop). Truyền node Target Item.' })
+    public onArrived: Ply_Event = new Ply_Event();
 
     private waitingForMoveComplete = false;
     private savedTargetItemType: ItemType = ItemType.None;
@@ -138,6 +142,8 @@ export class ItemToTarget extends Item {
             this.ItemDone();
             HandTutManager.Ins?.ItemDone(this.node);
         }
+        // Covers both a real move and Disable Item When Drop (which never moves).
+        this.onArrived.invoke(this.targetItem?.node ?? null);
         if (this.hideItemWhenArrive) {
             this.node.active = false;
             return;
