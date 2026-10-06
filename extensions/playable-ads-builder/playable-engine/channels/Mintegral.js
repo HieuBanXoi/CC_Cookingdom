@@ -1,8 +1,7 @@
-// Mintegral spec (Article 2): the store may only be opened through the
-// install() the Mintegral SDK injects. No store URLs and no browser fallback:
-// the offer on the Mintegral dashboard holds the store link.
 window.PlayableSDK = {
   channel: "Mintegral",
+  google_url: "",
+  apple_url: "",
   detectOS() {
     if (navigator.userAgentData && navigator.userAgentData.platform) {
       const _0x24b63d = navigator.userAgentData.platform;
@@ -29,11 +28,18 @@ window.PlayableSDK = {
   },
   download() {
     console.log("[PlayableSDK]", this.channel, "download()");
-    if (typeof window.install === "function") {
+    try {
       window.install();
-    } else {
-      console.warn("[PlayableSDK:" + this.channel + ":download] window.install is not available");
+      return;
+    } catch (_0x4d603d) {
+      console.warn("[PlayableSDK:" + this.channel + ":download] window.install failed, falling back to window.open", _0x4d603d);
     }
+    // const _0x541c92 = this.detectOS();
+    // if (_0x541c92 === "iOS" || _0x541c92 === "macOS") {
+    //   window.open(this.apple_url || this.google_url, "_blank");
+    // } else {
+    //   window.open(this.google_url || this.apple_url, "_blank");
+    // }
   },
   game_ready() {
     console.log("[PlayableSDK]", this.channel, "game_ready()");
