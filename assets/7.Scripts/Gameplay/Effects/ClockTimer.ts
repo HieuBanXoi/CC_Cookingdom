@@ -1,7 +1,7 @@
 import { _decorator, Node, Sprite, Tween, tween, Vec3 } from 'cc';
 import { World } from '../../Managers/World';
 import { PoolMember, PoolType } from '../../Core/Pool/PoolMember';
-import { Item } from '../Items/Item';
+import { Item } from '../Items/Common/Item';
 import { Ply_Event } from '../../Core/Base/Ply_Event';
 import { FxType, Ply_SoundManager } from '../../Managers/Ply_SoundManager';
 

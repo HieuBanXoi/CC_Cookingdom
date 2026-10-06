@@ -8,6 +8,13 @@ description: "Quy ước xây dựng Item gameplay cho Cookingdom (Cocos Creator
 Áp dụng mỗi khi tạo/sửa item gameplay, cơ chế tương tác mới, hoặc hand tutorial.
 Đường dẫn gốc: `assets/7.Scripts/Gameplay/Items/`, manager: `assets/7.Scripts/Managers/`.
 
+Cấu trúc thư mục Items:
+- `Common/` — script chung dùng cho mọi item: `Item`, `ItemType`, `ItemClickable`, `ItemDraggable`,
+  `ItemMoveToTarget`, `ItemStirring`, `ItemSound`, `ItemDragChildRotator`, `ItemDragRaycastTarget`, `ItemToTarget`.
+- `Special/<Nhóm>/` — item đặc thù theo cơ chế: `Cutting/` (thớt, dao, đồ cắt), `Water/` (bồn rửa, đồ ngâm nước),
+  `Cooking/` (chảo, xẻng, bát, đĩa, bóc màng), `Trash/` (rác, thùng rác, giấy).
+  Item mới đặc thù đặt vào nhóm phù hợp (hoặc tạo nhóm mới trong `Special/`); chỉ đưa vào `Common/` khi tái sử dụng được cho nhiều item.
+
 ## 1. Cấu trúc một Item (bắt buộc)
 
 Mọi node gameplay tương tác được **luôn** có component `Item` hoặc script kế thừa `Item`
@@ -46,8 +53,9 @@ Mẫu chuẩn (theo `Knife.ts`, `Spatula.ts`):
 
 ```ts
 import { _decorator, Node } from 'cc';
-import { Item } from './Item';
-import { ItemMoveToTarget } from './ItemMoveToTarget';
+// File đặt tại Items/Special/<Nhóm>/MyTool.ts
+import { Item } from '../../Common/Item';
+import { ItemMoveToTarget } from '../../Common/ItemMoveToTarget';
 
 const { ccclass, property } = _decorator;
 

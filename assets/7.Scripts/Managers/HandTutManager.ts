@@ -1,18 +1,18 @@
 import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, UITransform, Vec3 } from 'cc';
-import { Item, HandTutHint } from '../Gameplay/Items/Item';
-import { ItemStirring } from '../Gameplay/Items/ItemStirring';
-import { ItemDragRaycastTarget } from '../Gameplay/Items/ItemDragRaycastTarget';
-import { InWaterItem } from '../Gameplay/Items/InWaterItem';
-import { SinkBlock } from '../Gameplay/Items/SinkBlock';
-import { SinkButton } from '../Gameplay/Items/SinkButton';
-import { PlasticPeeler } from '../Gameplay/Items/PlasticPeeler';
-import { LastBowl } from '../Gameplay/Items/LastBowl';
-import { PaperBox } from '../Gameplay/Items/PaperBox';
+import { Item, HandTutHint } from '../Gameplay/Items/Common/Item';
+import { ItemStirring } from '../Gameplay/Items/Common/ItemStirring';
+import { ItemDragRaycastTarget } from '../Gameplay/Items/Common/ItemDragRaycastTarget';
+import { InWaterItem } from '../Gameplay/Items/Special/Water/InWaterItem';
+import { SinkBlock } from '../Gameplay/Items/Special/Water/SinkBlock';
+import { SinkButton } from '../Gameplay/Items/Special/Water/SinkButton';
+import { PlasticPeeler } from '../Gameplay/Items/Special/Cooking/PlasticPeeler';
+import { LastBowl } from '../Gameplay/Items/Special/Cooking/LastBowl';
+import { PaperBox } from '../Gameplay/Items/Special/Trash/PaperBox';
 import { Ply_Singleton } from '../Core/Base/Ply_Singleton';
 import { ComponentCache } from '../Core/Base/CacheComponent';
 import { InputManager } from './InputManager';
 import { GameManager } from './GameManager';
-import { ItemType } from '../Gameplay/Items/ItemType';
+import { ItemType } from '../Gameplay/Items/Common/ItemType';
 
 const { ccclass, property } = _decorator;
 
