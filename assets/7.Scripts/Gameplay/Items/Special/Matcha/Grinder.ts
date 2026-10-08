@@ -1,9 +1,10 @@
-import { _decorator, Node, Tween, tween, UIOpacity, Vec3 } from 'cc';
+import { _decorator, Enum, Node, Tween, tween, UIOpacity, Vec3 } from 'cc';
 import { Item } from '../../Common/Item';
 import { ItemType } from '../../Common/ItemType';
 import { Ply_Event } from '../../../../Core/Base/Ply_Event';
 import { GameManager } from '../../../../Managers/GameManager';
 import { HandTutManager } from '../../../../Managers/HandTutManager';
+import { FxType, Ply_SoundManager } from '../../../../Managers/Ply_SoundManager';
 import { PlayFadeOut, PlayFallIn } from '../../../Effects/FallIn';
 import { GrinderStirring } from './GrinderStirring';
 import type { MatchaBox } from './MatchaBox';
@@ -35,6 +36,9 @@ export class Grinder extends Item {
 
     @property({ group: { name: 'Leaf', id: 'grinder' }, tooltip: 'Góc lá xoay thêm mỗi frame của grinder (độ). Đổi dấu nếu lá xoay ngược.' })
     public leafAnglePerFrame: number = 45;
+
+    @property({ group: { name: 'Leaf', id: 'grinder' }, type: Enum(FxType), tooltip: 'Âm thanh khi lá rơi vào grinder.' })
+    public leafInFx: FxType = FxType.Drop;
 
     // ---------- Tab: Grind ----------
     @property({ group: { name: 'Grind', id: 'grinder', displayOrder: 1 }, type: GrinderStirring, tooltip: 'Component xoay trên grinder. Trống = tìm trên node này.' })
@@ -71,6 +75,9 @@ export class Grinder extends Item {
     @property({ group: { name: 'Pour', id: 'grinder' }, min: 0.01, tooltip: 'Thời gian giữ nghiêng, bột mờ dần (giây).' })
     public pourHoldDuration: number = 0.8;
 
+    @property({ group: { name: 'Pour', id: 'grinder' }, type: Enum(FxType), tooltip: 'Âm thanh khi đổ bột ra hộp.' })
+    public pourFx: FxType = FxType.PouringSalt;
+
     // ---------- Tab: Events ----------
     @property({ group: { name: 'Events', id: 'grinder', displayOrder: 3 }, type: Ply_Event })
     public onLeafIn: Ply_Event = new Ply_Event();
@@ -84,6 +91,7 @@ export class Grinder extends Item {
     private leafBaseScale = new Vec3(1, 1, 1);
     private leafBaseAngle = 0;
     private readyToPour = false;
+    private grindDone = false;
     private readonly onLeafDropped = (): void => this.OnLeafDropped();
     private readonly onSelfDropped = (): void => this.OnSelfDropped();
     private readonly onProgress = (progress: number): void => this.OnGrindProgress(progress);
@@ -103,7 +111,8 @@ export class Grinder extends Item {
         }
         this.SetPowderOpacity(0);
         if (this.stirring) this.stirring.enabled = false;
-        this.LockDrag();
+        // Not draggable at all until the grinding is done (EnablePourDrag).
+        this.DisableItemDraggable();
     }
 
     protected start(): void {
@@ -152,6 +161,7 @@ export class Grinder extends Item {
         this.DisableItemDraggable();
 
         const onLanded = (): void => {
+            Ply_SoundManager.Ins?.PlayFx(this.leafInFx);
             if (this.stirring) this.stirring.enabled = true;
             this.onLeafIn.invoke();
         };
@@ -179,6 +189,7 @@ export class Grinder extends Item {
     }
 
     private OnGrindComplete(): void {
+        this.grindDone = true;
         if (this.stirring) this.stirring.enabled = false;
         this.SetPowderOpacity(1);
         HandTutManager.Ins?.RegisterCorrectAction();
@@ -229,8 +240,9 @@ export class Grinder extends Item {
             .to(this.pourMoveDuration, { worldPosition: pourPos }, { easing: 'quadOut' })
             .to(this.pourTiltDuration, { angle: startAngle + this.pourAngle }, { easing: 'sineOut' })
             .call(() => {
+                Ply_SoundManager.Ins?.PlayFx(this.pourFx);
                 if (this.powderDone) PlayFadeOut(this.powderDone, this.pourHoldDuration);
-                (box as MatchaBox).ReceivePowder?.();
+                (box as MatchaBox).ReceivePowder?.(this.node);
             })
             .delay(this.pourHoldDuration)
             .to(this.pourTiltDuration, { angle: startAngle }, { easing: 'sineInOut' })
@@ -249,6 +261,7 @@ export class Grinder extends Item {
         // Fly back, then stay draggable but without a target.
         const onBack = (): void => {
             draggable.onReturnToStartComplete.removeListener(onBack);
+            (this.box as MatchaBox | null)?.RestorePowderLayer?.();
             this.scheduleOnce(() => this.LockDrag(), 0);
         };
         draggable.onReturnToStartComplete.addListener(onBack);
@@ -256,6 +269,12 @@ export class Grinder extends Item {
     }
 
     // ---------- Helpers ----------
+
+    /** Before the grinding is done a tap on the grinder is not a mistake: no break heart. */
+    public SpawnBreakHeartOnBlockedTap(): void {
+        if (!this.grindDone) return;
+        super.SpawnBreakHeartOnBlockedTap();
+    }
 
     /** Not its turn: still draggable, but every drop fails. */
     private LockDrag(): void {

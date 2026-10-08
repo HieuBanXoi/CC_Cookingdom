@@ -1,4 +1,4 @@
-import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, UITransform, Vec3 } from 'cc';
+import { _decorator, Enum, input, Input, Node, Tween, tween, UIOpacity, UITransform, Vec3, view } from 'cc';
 import { Item, HandTutHint } from '../Gameplay/Items/Common/Item';
 import { ItemStirring } from '../Gameplay/Items/Common/ItemStirring';
 import { ItemDragRaycastTarget } from '../Gameplay/Items/Common/ItemDragRaycastTarget';
@@ -125,6 +125,13 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     /** One no-delay item per group ("fish", "basket-food"...): registering another replaces the previous one. */
     private readonly noDelayGroups = new Map<string, Item>();
 
+    @property({ min: 0, tooltip: 'Sau khi đổi kích cỡ màn hình, chờ bao lâu (giây) để UI scale xong rồi vẽ lại hand tut.' })
+    public resizeRefreshDelay = 0.1;
+
+    private lastVisibleWidth = 0;
+    private lastVisibleHeight = 0;
+    private wasShowingBeforeResize = false;
+
     protected onLoad(): void {
         super.onLoad();
         // Seed the runtime set here (not in start): items register themselves
@@ -153,7 +160,37 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         this.isWaitingInitialSinkWaterTutorial = this.showSinkWaterTutorialOnStart;
     }
 
+    /**
+     * Hints cache world positions when they start, so after a screen resize
+     * (UI rescales the gameplay) the hand would point at stale spots: restart it.
+     */
+    private checkScreenResize(): void {
+        const size = view.getVisibleSize();
+        if (size.width === this.lastVisibleWidth && size.height === this.lastVisibleHeight) return;
+
+        const isFirstCheck = this.lastVisibleWidth === 0 && this.lastVisibleHeight === 0;
+        this.lastVisibleWidth = size.width;
+        this.lastVisibleHeight = size.height;
+        if (isFirstCheck) return;
+
+        // Keep "was showing" across a burst of resize frames (dragging the window edge).
+        this.wasShowingBeforeResize ||= !!this.handNode?.active;
+        this.hideHandTut();
+        this.unschedule(this.refreshAfterResize);
+        this.scheduleOnce(this.refreshAfterResize, this.resizeRefreshDelay);
+    }
+
+    private refreshAfterResize(): void {
+        const wasShowing = this.wasShowingBeforeResize;
+        this.wasShowingBeforeResize = false;
+        this.resetIdleTimer();
+        if (!wasShowing || !this.isStarted || this.isPaused || !this.handNode) return;
+        if (this.isPointerDown || this.isGameplayDragging || InputManager.Ins?.isDragging) return;
+        this.showNextHandTut();
+    }
+
     protected update(deltaTime: number): void {
+        this.checkScreenResize();
         this.removeCompletedItems();
         this.releasePlatedNoDelayItems();
         if (!this.isStarted || this.isPaused || !this.handNode) return;

@@ -34,6 +34,9 @@ export class PhaseData {
     @property({ min: 0, tooltip: 'Number of successful steps required to finish this phase.' })
     public totalSteps = 1;
 
+    @property({ tooltip: 'Clickbait: vào phase này thì StopGame, hand tut vẫn chỉ item đầu tiên còn làm được, chạm màn hình là về store.' })
+    public stopGameOnReady = false;
+
     @property({ type: Ply_Event, tooltip: 'Called after this phase reaches the centre and is playable.' })
     public onPhaseReady: Ply_Event = new Ply_Event();
 }
@@ -238,6 +241,7 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
             Vec3.copy(this.centerScreenPosition, phaseNode.position);
             this.phases[index].onPhaseReady.invoke();
+            if (this.phases[index].stopGameOnReady) GameManager.Ins?.StopGame();
         }
 
         if (this.phaseTransitionObject) this.phaseTransitionObject.active = false;
@@ -491,7 +495,11 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
         const phase = this.phases[this.currentPhaseIndex];
         phase?.onPhaseReady.invoke();
-        if (!GameManager.Ins?.isLoseGame) GameManager.Ins?.SetIsPlaying(true);
+        if (phase?.stopGameOnReady) {
+            GameManager.Ins?.StopGame();
+        } else if (!GameManager.Ins?.isLoseGame && !GameManager.Ins?.IsStopGameState()) {
+            GameManager.Ins?.SetIsPlaying(true);
+        }
         HandTutManager.Ins?.StartHandTutNoDelay();
     }
 

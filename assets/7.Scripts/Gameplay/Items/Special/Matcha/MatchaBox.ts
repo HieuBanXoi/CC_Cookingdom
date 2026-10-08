@@ -27,6 +27,9 @@ export class MatchaBox extends Item {
     @property({ group: { name: 'Powder', id: 'box' }, range: [0, 1, 0.05], slide: true, tooltip: 'Độ rõ lúc bắt đầu rơi (0.2 = 20%).' })
     public powderStartOpacity: number = 0.2;
 
+    @property({ group: { name: 'Powder', id: 'box' }, tooltip: 'Trong lúc đổ, vẽ bột đè lên dụng cụ đang đổ (grinder), xong thì trả bột về hộp.' })
+    public powderAboveSource: boolean = true;
+
     // ---------- Tab: Lid ----------
     @property({ group: { name: 'Lid', id: 'box', displayOrder: 1 }, type: Item, tooltip: 'Nắp hộp (MATCHA_BOX_2-1), kéo thả vào hộp sau khi có bột.' })
     public lid: Item | null = null;
@@ -68,6 +71,11 @@ export class MatchaBox extends Item {
     public onLidClosed: Ply_Event = new Ply_Event();
 
     private hasPowder = false;
+    private powderParent: Node | null = null;
+    private powderSibling = -1;
+    private powderFalling = false;
+    private restorePending = false;
+    private readonly powderLocalPos = new Vec3();
     private bubbleScale = new Vec3(1, 1, 1);
     private lidReady = false;
     private readonly onLidDropped = (): void => this.OnLidDropped();
@@ -95,16 +103,20 @@ export class MatchaBox extends Item {
         this.lid?.itemMoveToTarget?.onComplete.removeListener(this.onLidArrived);
     }
 
-    /** Called by Grinder while it pours. */
-    public ReceivePowder(): void {
+    /** Called by Grinder while it pours. `source` = the pouring tool (powder is drawn above it). */
+    public ReceivePowder(source?: Node): void {
         if (this.hasPowder) return;
         this.hasPowder = true;
+        if (source && this.powderAboveSource) this.LiftPowderAbove(source);
 
         const onLanded = (): void => {
+            this.powderFalling = false;
+            if (this.restorePending) this.RestorePowderLayer();
             this.onPowderIn.invoke();
             this.EnableLid();
         };
         if (this.powder) {
+            this.powderFalling = true;
             PlayFallIn(this.powder, this.powderFallHeight, this.powderFallDuration, this.powderStartOpacity, onLanded);
         } else {
             onLanded();
@@ -133,6 +145,45 @@ export class MatchaBox extends Item {
             .to(this.bubbleHideDuration, { scale: new Vec3(0, 0, 0) }, { easing: 'backIn' })
             .call(() => { bubble.active = false; })
             .start();
+    }
+
+    /** Moves the powder right above `source` in draw order, keeping its look. */
+    private LiftPowderAbove(source: Node): void {
+        const powder = this.powder;
+        const layer = source.parent;
+        if (!powder || !layer || powder.parent === layer) return;
+        this.powderParent = powder.parent;
+        this.powderSibling = powder.getSiblingIndex();
+        Vec3.copy(this.powderLocalPos, powder.position);
+        this.ReparentKeepWorld(powder, layer);
+        powder.setSiblingIndex(source.getSiblingIndex() + 1);
+    }
+
+    /** Puts the powder back in the box once the pouring tool has left. */
+    public RestorePowderLayer(): void {
+        const powder = this.powder;
+        const parent = this.powderParent;
+        if (!powder || !parent?.isValid) return;
+        // Still falling: put it back once it has landed.
+        if (this.powderFalling) {
+            this.restorePending = true;
+            return;
+        }
+        this.restorePending = false;
+        this.powderParent = null;
+        this.ReparentKeepWorld(powder, parent);
+        powder.setPosition(this.powderLocalPos);
+        if (this.powderSibling >= 0) powder.setSiblingIndex(this.powderSibling);
+    }
+
+    private ReparentKeepWorld(node: Node, parent: Node): void {
+        const pos = node.worldPosition.clone();
+        const scale = node.worldScale.clone();
+        const rot = node.worldRotation.clone();
+        node.setParent(parent);
+        node.setWorldPosition(pos);
+        node.setWorldScale(scale);
+        node.setWorldRotation(rot);
     }
 
     private EnableLid(): void {

@@ -1,4 +1,4 @@
-import { _decorator, EventTouch, Node, ParticleSystem2D } from 'cc';
+import { _decorator, Enum, EventTouch, Node, ParticleSystem2D } from 'cc';
 import { ItemStirring } from '../../Common/ItemStirring';
 import { Ply_Event } from '../../../../Core/Base/Ply_Event';
 import { GameManager } from '../../../../Managers/GameManager';
@@ -31,6 +31,9 @@ export class GrinderStirring extends ItemStirring {
 
     @property({ group: { name: 'Grind', id: 'grind' }, min: 0, tooltip: 'Ngừng xoay bao lâu (giây) thì tắt particle/âm thanh.' })
     public idleStopDelay: number = 0.15;
+
+    @property({ group: { name: 'Grind', id: 'grind' }, type: Enum(FxType), tooltip: 'Âm thanh lặp lại khi đang xoay.' })
+    public grindFx: FxType = FxType.KnifeSwing;
 
     @property({ group: { name: 'Events', id: 'stir' }, type: Ply_Event, tooltip: 'Tiến độ xay 0..1.' })
     public onProgress: Ply_Event = new Ply_Event();
@@ -168,10 +171,10 @@ export class GrinderStirring extends ItemStirring {
         this.moving = moving;
         if (moving) {
             this.particle?.resetSystem();
-            Ply_SoundManager.Ins?.PlayFxLoop(FxType.Stirring);
+            Ply_SoundManager.Ins?.PlayFxLoop(this.grindFx);
         } else {
             this.particle?.stopSystem();
-            Ply_SoundManager.Ins?.StopFxLoop(FxType.Stirring);
+            Ply_SoundManager.Ins?.StopFxLoop(this.grindFx);
         }
     }
 
