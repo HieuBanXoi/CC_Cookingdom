@@ -56,6 +56,9 @@ export class Grinder extends Item {
     @property({ group: { name: 'Grind', id: 'grinder' }, min: 0.01, tooltip: 'Thời gian phần trên bay lên + mờ đi (giây).' })
     public topFlyDuration: number = 0.6;
 
+    @property({ group: { name: 'Grind', id: 'grinder' }, min: -1, tooltip: 'Hand tut bước xay: chưa xay bao lâu (giây) thì hiện tay; chạm sai/chỗ khác không reset và không tắt tay cho tới khi xay. -1 = hand tut bình thường.' })
+    public grindHintDelay: number = 7;
+
     // ---------- Tab: Pour ----------
     @property({ group: { name: 'Pour', id: 'grinder', displayOrder: 2 }, type: Item, tooltip: 'Hộp matcha (MatchaBox) để đổ bột vào.' })
     public box: Item | null = null;
@@ -269,6 +272,11 @@ export class Grinder extends Item {
     }
 
     // ---------- Helpers ----------
+
+    public GetStickyHandTutDelay(): number {
+        const grinding = !!this.stirring?.enabled && !this.stirring.IsDone;
+        return grinding ? this.grindHintDelay : -1;
+    }
 
     /** Before the grinding is done a tap on the grinder is not a mistake: no break heart. */
     public SpawnBreakHeartOnBlockedTap(): void {

@@ -505,6 +505,20 @@ export class Item extends Ply_GameUnit {
         return null;
     }
 
+    /**
+     * Sticky hint: return the wait (seconds) before the hand shows for this
+     * item. Wrong touches then neither reset the wait nor hide the hand; only
+     * IsDoingHandTutAction() does. -1 = normal idle hint.
+     */
+    public GetStickyHandTutDelay(): number {
+        return -1;
+    }
+
+    /** True while the player is doing this item's hinted action (used by sticky hints). */
+    public IsDoingHandTutAction(): boolean {
+        return !!this.itemStirring?.IsStirring || !!this.itemDraggable?.IsDragging;
+    }
+
     /** HandTutManager started showing a hint for this item. */
     public OnHandTutShown(): void {}
 

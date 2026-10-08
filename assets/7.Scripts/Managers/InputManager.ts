@@ -200,6 +200,17 @@ export class InputManager extends Ply_Singleton<InputManager> {
      * over a locked trash child sitting on the same food); otherwise the
      * topmost hit is returned so locked items can still give feedback.
      */
+    /** True when `worldPoint` is inside `node`'s own UITransform rect (children not included). */
+    public static NodeContainsPoint(node: Node, worldPoint: Vec3): boolean {
+        const transform = node.getComponent(UITransform);
+        if (!transform) return false;
+        const localPoint = transform.convertToNodeSpaceAR(worldPoint);
+        const left = -transform.anchorX * transform.width;
+        const bottom = -transform.anchorY * transform.height;
+        return localPoint.x >= left && localPoint.x <= left + transform.width
+            && localPoint.y >= bottom && localPoint.y <= bottom + transform.height;
+    }
+
     private getTouchedComponent<T>(
         event: EventTouch,
         componentType: new (...args: any[]) => T,
@@ -226,14 +237,14 @@ export class InputManager extends Ply_Singleton<InputManager> {
         for (let i = components.length - 1; i >= 0; i--) {
             const component = components[i] as any;
             const node = component.node as Node | null;
-            const transform = node?.getComponent(UITransform);
-            if (!node?.activeInHierarchy || !transform) continue;
+            if (!node?.activeInHierarchy) continue;
 
-            const localPoint = transform.convertToNodeSpaceAR(worldTouchPosition);
-            const left = -transform.anchorX * transform.width;
-            const bottom = -transform.anchorY * transform.height;
-            if (localPoint.x >= left && localPoint.x <= left + transform.width
-                && localPoint.y >= bottom && localPoint.y <= bottom + transform.height) {
+            // A component can widen its own touch area (e.g. a grinder handle
+            // drawn outside the node rect) by implementing ContainsTouch().
+            const hit = typeof component.ContainsTouch === 'function'
+                ? component.ContainsTouch(worldTouchPosition)
+                : InputManager.NodeContainsPoint(node, worldTouchPosition);
+            if (hit) {
                 if (!prefer || prefer(component as T)) return component as T;
                 fallback ??= component as T;
             }

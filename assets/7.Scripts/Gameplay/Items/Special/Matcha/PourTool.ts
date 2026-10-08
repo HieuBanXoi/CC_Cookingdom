@@ -31,7 +31,7 @@ export class PourTool extends Item {
     @property({ group: { name: 'Scoop', id: 'pour' }, type: Enum(FxType), tooltip: 'Âm thanh khi múc được.', visible: function (this: PourTool) { return this.needScoop; } })
     public scoopFx: FxType = FxType.Cream;
 
-    @property({ group: { name: 'Scoop', id: 'pour' }, type: Node, tooltip: 'Phần chứa trên dụng cụ (matcha trên thìa): ẩn lúc đầu, bật khi múc, mờ đi khi đổ.' })
+    @property({ group: { name: 'Scoop', id: 'pour' }, type: Node, tooltip: 'Phần chứa trên dụng cụ (matcha trên thìa / trong bát): khi cần múc thì ẩn lúc đầu và bật khi múc; không cần múc thì có sẵn. Mờ đi khi đổ.' })
     public content: Node | null = null;
 
     // ---------- Tab: Pour ----------
@@ -80,7 +80,9 @@ export class PourTool extends Item {
 
     protected onLoad(): void {
         super.onLoad();
-        if (this.content) this.content.active = false;
+        // A scooping tool starts empty; otherwise it is already full.
+        if (this.content && this.needScoop) this.content.active = false;
+        this.hasContent = !this.needScoop && !!this.content?.active;
         if (this.stream) this.stream.active = false;
         this.Lock();
     }

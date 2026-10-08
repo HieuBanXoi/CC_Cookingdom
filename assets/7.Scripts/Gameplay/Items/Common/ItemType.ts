@@ -22,6 +22,9 @@ export enum ItemType {
     Grinder,
     MatchaBox,
     MatchaBowl,
+    MatchaGlass,
+    MatchaTray,
+    Customer,
 
 }
 Enum(ItemType);

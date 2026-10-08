@@ -1,4 +1,4 @@
-import { _decorator, animation, Animation, AnimationState, Node, Sprite, SpriteFrame, Vec2, Vec3, EventTouch } from 'cc';
+import { _decorator, animation, Animation, AnimationState, Node, Sprite, SpriteFrame, UITransform, Vec2, Vec3, EventTouch } from 'cc';
 import { Ply_SoundManager, FxType } from '../../../Managers/Ply_SoundManager';
 import { Ply_Event } from '../../../Core/Base/Ply_Event';
 import { Ply_EventHandlerComponent } from '../../../Core/Base/Ply_EventHandlerComponent';
@@ -18,6 +18,9 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
     @property({ min: 0, tooltip: 'Bán kính tối đa que khuấy được rời khỏi tâm (pixel).' })
     public stirRadius: number = 200;
+
+    @property({ type: [Node], tooltip: 'Vùng chạm thêm để bắt đầu khuấy (ngoài khung node này), ví dụ tay cầm vẽ tràn ra ngoài.' })
+    public extraHitAreas: Node[] = [];
 
     // ---------- Tab: Animation ----------
     @property({ group: { name: 'Animation', id: 'stir', displayOrder: 0 }, type: animation.AnimationController, tooltip: 'Optional Animation Controller used instead of Stir Animation.' })
@@ -96,6 +99,22 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
         Ply_SoundManager.Ins.PlayFxLoop(FxType.Stirring);
         this.onStirBegin.invoke();
+    }
+
+    /** InputManager hit test: this node's rect or any active extra hit area. */
+    public ContainsTouch(worldPoint: Vec3): boolean {
+        if (ItemStirring.RectContains(this.node, worldPoint)) return true;
+        return this.extraHitAreas.some(area => !!area?.activeInHierarchy && ItemStirring.RectContains(area, worldPoint));
+    }
+
+    protected static RectContains(node: Node, worldPoint: Vec3): boolean {
+        const transform = node.getComponent(UITransform);
+        if (!transform) return false;
+        const local = transform.convertToNodeSpaceAR(worldPoint);
+        const left = -transform.anchorX * transform.width;
+        const bottom = -transform.anchorY * transform.height;
+        return local.x >= left && local.x <= left + transform.width
+            && local.y >= bottom && local.y <= bottom + transform.height;
     }
 
     public ResetStir() {

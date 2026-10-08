@@ -194,6 +194,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         this.removeCompletedItems();
         this.releasePlatedNoDelayItems();
         if (!this.isStarted || this.isPaused || !this.handNode) return;
+        if (this.updateStickyHint(deltaTime)) return;
 
         // A phase can deactivate an item while its hint is already playing, or
         // the item can finish its step through input this manager never sees
@@ -241,6 +242,14 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         this.isPaused = false;
         this.isStarted = true;
         this.resetIdleTimer();
+    }
+
+    /** Shows the next hint right now (no idle wait), e.g. for the final clickbait. */
+    public ShowHintNow(): void {
+        this.StartHandTut();
+        this.hideHandTut();
+        this.resetIdleTimer();
+        this.showNextHandTut();
     }
 
     public StartHandTutNoDelay(): void {
@@ -484,6 +493,8 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         if (this.isPaused) return;
         this.isPointerDown = true;
         if (!this.isStarted) this.StartHandTut();
+        // Sticky step: a wrong touch neither hides the hand nor restarts the wait.
+        if (this.getStickyItem()) return;
         this.hideHandTut();
         this.resetIdleTimer();
     }
@@ -491,6 +502,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     private onTouchEnd(): void {
         this.isPointerDown = false;
         this.isGameplayDragging = false;
+        if (this.getStickyItem()) return;
         this.resetIdleTimer();
     }
 
@@ -549,6 +561,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     public OnGameplayDragBegin(): void {
+        if (this.getStickyItem()) return;
         this.isGameplayDragging = true;
         this.hideHandTut();
         this.resetIdleTimer();
@@ -557,7 +570,7 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     public OnGameplayDragEnd(): void {
         this.isPointerDown = false;
         this.isGameplayDragging = false;
-        this.resetIdleTimer();
+        if (!this.getStickyItem()) this.resetIdleTimer();
     }
 
     private isPlasticPeelerReady(peeler: PlasticPeeler | null): boolean {
@@ -627,6 +640,40 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
             this.setCurrentItemHandTut(item);
             this.TypeHind = TypeHind.Stir;
         }
+    }
+
+    /**
+     * The next item when it asks for a sticky hint (Item.GetStickyHandTutDelay
+     * >= 0): only its own interaction resets the wait, and once shown the hand
+     * stays until the player does it.
+     */
+    private getStickyItem(): Item | null {
+        if (!this.isStarted || this.isPaused) return null;
+        const item = this.getFirstTutorialReadyItem();
+        return item && item.GetStickyHandTutDelay() >= 0 ? item : null;
+    }
+
+    /** Returns true when a sticky item drives the hint this frame. */
+    private updateStickyHint(deltaTime: number): boolean {
+        const item = this.getStickyItem();
+        if (!item) return false;
+
+        // The real action is happening: hide and wait again from zero.
+        if (item.IsDoingHandTutAction()) {
+            this.hideHandTut();
+            this.resetIdleTimer();
+            return true;
+        }
+
+        const inputLocked = !!GameManager.Ins && !GameManager.Ins.IsPlaying() && !GameManager.Ins.IsStopGameState();
+        if (inputLocked) return true;
+
+        this.idleTimer += deltaTime;
+        if (!this.handNode.active && this.idleTimer >= item.GetStickyHandTutDelay()) {
+            this.idleTimer = 0;
+            this.showNextHandTut();
+        }
+        return true;
     }
 
     private getFirstTutorialReadyItem(): Item | null {

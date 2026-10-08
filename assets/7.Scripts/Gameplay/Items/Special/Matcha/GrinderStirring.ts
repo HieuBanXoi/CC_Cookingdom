@@ -1,4 +1,4 @@
-import { _decorator, Enum, EventTouch, Node, ParticleSystem2D } from 'cc';
+import { _decorator, Enum, EventTouch, Node, ParticleSystem2D, Vec3 } from 'cc';
 import { ItemStirring } from '../../Common/ItemStirring';
 import { Ply_Event } from '../../../../Core/Base/Ply_Event';
 import { GameManager } from '../../../../Managers/GameManager';
@@ -74,6 +74,12 @@ export class GrinderStirring extends ItemStirring {
         this.frameIndex = Math.max(0, shown);
         this.ShowFrame(this.frameIndex);
         this.particle?.stopSystem();
+    }
+
+    /** Any handle frame counts as the grinder (frames are drawn outside the node rect). */
+    public ContainsTouch(worldPoint: Vec3): boolean {
+        if (super.ContainsTouch(worldPoint)) return true;
+        return this.frames.some(frame => !!frame && ItemStirring.RectContains(frame, worldPoint));
     }
 
     public BeginStir(event?: EventTouch): void {
