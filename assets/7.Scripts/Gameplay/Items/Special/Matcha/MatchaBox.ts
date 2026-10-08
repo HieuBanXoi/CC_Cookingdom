@@ -1,4 +1,4 @@
-import { _decorator, Node, sp } from 'cc';
+import { _decorator, Node, sp, Tween, tween, Vec3 } from 'cc';
 import { Item } from '../../Common/Item';
 import { ItemType } from '../../Common/ItemType';
 import { Ply_Event } from '../../../../Core/Base/Ply_Event';
@@ -47,14 +47,28 @@ export class MatchaBox extends Item {
     @property({ group: { name: 'Finish', id: 'box' }, tooltip: 'Đậy nắp xong thì gọi PhaseManager.DoOneStep().' })
     public doPhaseStep: boolean = true;
 
+    // ---------- Tab: Bubble ----------
+    @property({ group: { name: 'Bubble', id: 'box', displayOrder: 3 }, type: Node, tooltip: 'Bubble chat của capy: vào game thì zoom 0 -> 1, hoàn thành món thì ẩn đi.' })
+    public bubble: Node | null = null;
+
+    @property({ group: { name: 'Bubble', id: 'box' }, min: 0, tooltip: 'Chờ bao lâu (giây) sau khi vào game mới hiện bubble.' })
+    public bubbleShowDelay: number = 0.3;
+
+    @property({ group: { name: 'Bubble', id: 'box' }, min: 0.01, tooltip: 'Thời gian zoom hiện bubble (giây).' })
+    public bubbleShowDuration: number = 0.4;
+
+    @property({ group: { name: 'Bubble', id: 'box' }, min: 0.01, tooltip: 'Thời gian zoom ẩn bubble (giây).' })
+    public bubbleHideDuration: number = 0.25;
+
     // ---------- Tab: Events ----------
-    @property({ group: { name: 'Events', id: 'box', displayOrder: 3 }, type: Ply_Event })
+    @property({ group: { name: 'Events', id: 'box', displayOrder: 4 }, type: Ply_Event })
     public onPowderIn: Ply_Event = new Ply_Event();
 
     @property({ group: { name: 'Events', id: 'box' }, type: Ply_Event })
     public onLidClosed: Ply_Event = new Ply_Event();
 
     private hasPowder = false;
+    private bubbleScale = new Vec3(1, 1, 1);
     private lidReady = false;
     private readonly onLidDropped = (): void => this.OnLidDropped();
     private readonly onLidArrived = (): void => this.OnLidArrived();
@@ -65,6 +79,7 @@ export class MatchaBox extends Item {
         // The box is only a drop target.
         this.DisableItemDraggable();
         this.LockLid();
+        this.ShowBubble();
     }
 
     protected onEnable(): void {
@@ -94,6 +109,30 @@ export class MatchaBox extends Item {
         } else {
             onLanded();
         }
+    }
+
+    /** Bubble pops in (scale 0 -> its scene scale). */
+    private ShowBubble(): void {
+        const bubble = this.bubble;
+        if (!bubble) return;
+        this.bubbleScale.set(bubble.scale);
+        Tween.stopAllByTarget(bubble);
+        bubble.active = true;
+        bubble.setScale(0, 0, 0);
+        tween(bubble)
+            .delay(this.bubbleShowDelay)
+            .to(this.bubbleShowDuration, { scale: this.bubbleScale.clone() }, { easing: 'backOut' })
+            .start();
+    }
+
+    private HideBubble(): void {
+        const bubble = this.bubble;
+        if (!bubble || !bubble.active) return;
+        Tween.stopAllByTarget(bubble);
+        tween(bubble)
+            .to(this.bubbleHideDuration, { scale: new Vec3(0, 0, 0) }, { easing: 'backIn' })
+            .call(() => { bubble.active = false; })
+            .start();
     }
 
     private EnableLid(): void {
@@ -139,6 +178,7 @@ export class MatchaBox extends Item {
     }
 
     private Finish(): void {
+        this.HideBubble();
         if (this.spine && this.cheerAnimation) {
             this.spine.setAnimation(0, this.cheerAnimation, false);
             if (this.idleAnimation) this.spine.addAnimation(0, this.idleAnimation, true, 0);

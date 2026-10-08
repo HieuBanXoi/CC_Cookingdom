@@ -269,15 +269,15 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         return !this.allowedItems || this.allowedItems.has(item);
     }
 
-    /** Adds an item to the tutorial queue at runtime and requests a fast hint. */
-    public RegisterTutorialItem(item: Item): void {
+    /** Adds an item to the tutorial queue at runtime. fastHint = false: wait the normal idle delay. */
+    public RegisterTutorialItem(item: Item, fastHint: boolean = true): void {
         if (!item || !item.isValid) return;
 
         if (!this.items.includes(item)) {
             this.items.push(item);
         }
         this.bindConfiguredItems();
-        this.forceNoDelay = true;
+        if (fastHint) this.forceNoDelay = true;
         this.hideHandTut();
         this.resetIdleTimer();
     }
