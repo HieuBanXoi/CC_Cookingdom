@@ -98,6 +98,8 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
     private currentDropFailIsValidAction: boolean = false;
     private consumeCurrentDropFail: boolean = false;
     private suppressCurrentDropFailEffect: boolean = false;
+    /** HasDraggedFarEnough() measured at release, before the item travels back. */
+    private currentDropFailDraggedFar: boolean = false;
     private pendingDragDelta: Vec2 = new Vec2();
 
     private cachedReturnPosition: Vec3 = new Vec3();
@@ -235,6 +237,7 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
             this.suppressCurrentDropFailEffect = false;
             this.currentDropFailIsValidAction = false;
             this.consumeCurrentDropFail = false;
+            this.currentDropFailDraggedFar = this.HasDraggedFarEnough();
             this.onDropFail.invoke();
 
             // Show the failure feedback at the rejected drop position, before
@@ -471,6 +474,8 @@ export class ItemDraggable extends Ply_EventHandlerComponent {
      */
     public SpawnDeferredDropFailEffect(): void {
         if (this.isDraggingSession || this.currentDropFailIsValidAction || !this.spawnBreakHeartOnDropFail) return;
+        // A tap or tiny nudge is not a real failed attempt (same rule as EndDrag).
+        if (!this.currentDropFailDraggedFar) return;
         this.item?.SpawnBreakHeart();
     }
 

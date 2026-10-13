@@ -41,6 +41,10 @@ export class ItemStirring extends Ply_EventHandlerComponent {
     @property({ group: { name: 'Animation', id: 'stir' }, min: 0.0001, tooltip: 'Touch movement in pixels converted to animation speed.' })
     public dragToAnimationSpeed: number = 0.05;
 
+    // ---------- Tab: Progress ----------
+    @property({ group: { name: 'Progress', id: 'stir', displayOrder: 0 }, min: 0, tooltip: 'Dùng khi không có Animation: tổng quãng kéo (pixel UI) để khuấy xong. 0 = tắt (dùng Animation).' })
+    public requiredStirDistance: number = 0;
+
     // ---------- Tab: Sprite ----------
     @property({ group: { name: 'Sprite', id: 'stir', displayOrder: 1 }, type: Sprite, tooltip: 'Sprite whose appearance changes while stirring. If empty, the first Sprite on this node is used.' })
     public stateSprite: Sprite | null = null;
@@ -61,11 +65,17 @@ export class ItemStirring extends Ply_EventHandlerComponent {
     private isDone: boolean = false;
     private isStirring: boolean = false;
     private currentProgress: number = 0;
+    private stirDistance: number = 0;
     private lastTouchPos: Vec2 = new Vec2();
     private stirAnimationState: AnimationState | null = null;
 
     public get IsDone(): boolean {
         return this.isDone;
+    }
+
+    /** Stirring progress in [0, 1]. */
+    public get Progress(): number {
+        return this.isDone ? 1 : this.currentProgress;
     }
 
     public get IsStirring(): boolean {
@@ -90,7 +100,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
         if (this.UsesAnimationController()) {
             this.stirAnimationController!.setValue(this.stirControllerTrigger.trim(), true);
-        } else {
+        } else if (!this.UsesDistanceProgress()) {
             this.resumeStirAnimation();
         }
 
@@ -102,6 +112,7 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         this.isDone = false;
         this.isStirring = false;
         this.currentProgress = 0;
+        this.stirDistance = 0;
         this.ShowIdleSprite();
         if (this.UsesAnimationController()) return;
 
@@ -121,6 +132,13 @@ export class ItemStirring extends Ply_EventHandlerComponent {
         this.lastTouchPos.set(curTouchPos.x, curTouchPos.y);
 
         this.moveStirrerToTouch(curTouchPos);
+
+        if (this.UsesDistanceProgress()) {
+            this.stirDistance += dist;
+            this.currentProgress = Math.min(1, this.stirDistance / this.requiredStirDistance);
+            if (this.currentProgress >= 1) this.CompleteStir();
+            return;
+        }
 
         // A controller owns the animation timing. Touch movement still moves
         // the visual stirrer, but it does not attempt to alter clip speed.
@@ -198,6 +216,11 @@ export class ItemStirring extends Ply_EventHandlerComponent {
 
     private UsesAnimationController(): boolean {
         return !!this.stirAnimationController && !!this.stirControllerTrigger.trim();
+    }
+
+    /** Progress follows the dragged distance when no animation drives it. */
+    private UsesDistanceProgress(): boolean {
+        return this.requiredStirDistance > 0 && !this.UsesAnimationController() && !this.getStirAnimationState();
     }
 
     /** Changes to the visual used while the spatula is at the stirring target. */

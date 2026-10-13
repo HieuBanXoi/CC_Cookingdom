@@ -19,6 +19,9 @@ export enum ItemType {
     Ketchup,
     Pizza,
     Tray,
-
+    CabbageOnBoard,
+    PlateLast,
+    Pot,
+    WaterBowl,
 }
 Enum(ItemType);

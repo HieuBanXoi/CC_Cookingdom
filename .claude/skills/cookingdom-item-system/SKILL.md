@@ -13,8 +13,10 @@ Cấu trúc thư mục Items:
   `ItemMoveToTarget`, `ItemStirring`, `ItemSound`, `ItemDragChildRotator`, `ItemDragRaycastTarget`, `ItemToTarget`.
 - `Special/<Nhóm>/` — item đặc thù theo cơ chế: `Cutting/` (thớt, dao, đồ cắt), `Water/` (bồn rửa, đồ ngâm nước),
   `Cooking/` (chảo, xẻng, bát, đĩa, bóc màng), `Trash/` (rác, thùng rác, giấy).
-  `Pizza/` (PizzaKitchen: Flour + thứ tự pizza; Pizza: lăn → các bước nguyên liệu `PizzaStep`/`PizzaIngredientGroup`
-  → lò → khay, `stopGameAfter` để StopGame + clickbait; RollingPin, Spoon extends ItemToTarget, Microwave).
+  `CabbageRoll/` (Cabbage: thớt → nhận sauce → vuốt lên 2 lần để cuốn → CabbagePlate; SauceSpoon múc sauce khi quét qua bát lúc đang kéo),
+  `Sauce/` (SaucePot điều phối thứ tự nước → muối/bếp → cornstarch → khuấy → đổ ra bát; PourItem cho đồ đổ/rắc vào nồi;
+  StoveButton; SauceSpatula extends Spatula). Tween fade/zoom/punch dùng chung ở `Utils/NodeFx.ts`.
+  `ItemStirring.requiredStirDistance` > 0: tiến độ khuấy theo quãng kéo khi không có Animation (đọc `Progress`).
   Item mới đặc thù đặt vào nhóm phù hợp (hoặc tạo nhóm mới trong `Special/`); chỉ đưa vào `Common/` khi tái sử dụng được cho nhiều item.
 
 ## 1. Cấu trúc một Item (bắt buộc)
