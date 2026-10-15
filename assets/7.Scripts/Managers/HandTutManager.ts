@@ -177,7 +177,8 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
         // Also stay quiet while gameplay input is locked (an item is flying to
         // its target, a zoom is playing...): a hint then would point at an item
         // the player cannot touch yet, and could linger after it moved away.
-        const inputLocked = !!GameManager.Ins && !GameManager.Ins.IsPlaying();
+        // StopGame (clickbait) also clears isPlaying, but its hint must keep showing.
+        const inputLocked = !!GameManager.Ins && !GameManager.Ins.IsPlaying() && !GameManager.Ins.IsStopGameState();
         if (this.isPointerDown || this.isGameplayDragging || InputManager.Ins?.isDragging || inputLocked) {
             this.resetIdleTimer();
             this.hideHandTut();
@@ -961,6 +962,8 @@ export class HandTutManager extends Ply_Singleton<HandTutManager> {
     }
 
     private canShowMore(): boolean {
+        // The clickbait hint after StopGame ignores the tutorial step limit.
+        if (GameManager.Ins?.IsStopGameState()) return true;
         return this.maxHandTutShowCount <= 0 || this.shownCount < this.maxHandTutShowCount;
     }
 

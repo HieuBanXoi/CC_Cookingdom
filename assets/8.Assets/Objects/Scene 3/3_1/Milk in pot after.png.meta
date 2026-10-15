@@ -129,6 +129,10 @@
     "type": "sprite-frame",
     "fixAlphaTransparencyArtifacts": false,
     "hasAlpha": true,
-    "redirect": "552ca1c1-d795-4534-af4f-74b58ca44332@6c48a"
+    "redirect": "552ca1c1-d795-4534-af4f-74b58ca44332@6c48a",
+    "compressSettings": {
+      "useCompressTexture": true,
+      "presetId": "03/m4ybQVOJ7SPOhieTjrl"
+    }
   }
 }

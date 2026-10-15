@@ -150,6 +150,10 @@ export class GameManager extends Ply_Singleton<GameManager> {
         this.ChangeState(new StopGameState());
     }
 
+    public IsStopGameState(): boolean {
+        return this.currentState instanceof StopGameState;
+    }
+
     public WinGame() {
         console.log("GameManager: WinGame called");
         this.isLoseGame = false;

@@ -1,4 +1,4 @@
-import { _decorator, Enum, Node, Tween, tween, Vec3 } from 'cc';
+import { _decorator, Canvas, Enum, Node, Sprite, SpriteFrame, Tween, tween, UITransform, Vec3 } from 'cc';
 import { GameManager } from './GameManager';
 import { HandTutManager } from './HandTutManager';
 import { Ply_Event } from '../Core/Base/Ply_Event';
@@ -12,17 +12,30 @@ export enum PhaseTransitionType {
     HorizontalSlide = 0,
     VerticalSlide,
     ObjectTransition,
+    /** Many copies of one sprite fly in from both sides, cover the screen, then fly back out. */
+    SpriteSwarm,
 }
 Enum(PhaseTransitionType);
+
+/** One sprite of the swarm transition. */
+interface SwarmPiece {
+    node: Node;
+    target: Vec3;
+    exit: Vec3;
+    delay: number;
+}
 
 /** Inspector data for one playable phase. */
 @ccclass('PhaseData')
 export class PhaseData {
-    @property({ type: [Node], tooltip: 'Nodes of this phase. They are shown/hidden and slid together, each around its own scene position.' })
-    public phaseObjects: Node[] = [];
+    @property({ type: Node, tooltip: 'Root node containing all objects of this phase.' })
+    public phaseObject: Node | null = null;
 
     @property({ min: 0, tooltip: 'Number of successful steps required to finish this phase.' })
     public totalSteps = 1;
+
+    @property({ tooltip: 'Clickbait: vào phase này thì StopGame, hand tut vẫn chỉ item đầu tiên còn làm được, chạm màn hình là về store.' })
+    public stopGameOnReady = false;
 
     @property({ type: Ply_Event, tooltip: 'Called after this phase reaches the centre and is playable.' })
     public onPhaseReady: Ply_Event = new Ply_Event();
@@ -56,6 +69,45 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
     @property({ min: 0.01, tooltip: 'How long the Object Transition overlay is visible.' })
     public phaseTransitionObjectDuration = 1.5;
 
+    // ---------- Sprite Swarm transition ----------
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, type: SpriteFrame, tooltip: 'Sprite được nhân bản để che màn hình khi chuyển phase.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmSpriteFrame: SpriteFrame | null = null;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, type: Node, tooltip: 'Node chứa các sprite (nên là con trên cùng của Canvas). Trống = tự tạo dưới Canvas.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmLayer: Node | null = null;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 10, tooltip: 'Cỡ mỗi sprite (px, cạnh rộng).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmSpriteSize = 320;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, range: [0.3, 1, 0.05], slide: true, tooltip: 'Khoảng cách lưới / cỡ sprite. Nhỏ hơn = chồng lên nhau nhiều hơn, che kín hơn.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmSpacing = 0.4;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0, tooltip: 'Phủ rộng thêm ra ngoài màn hình (px) cho chắc không hở mép.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmMargin = 150;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, tooltip: 'Scale ngẫu nhiên mỗi sprite (min, max).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmScaleRange = new Vec3(0.9, 1.3, 0);
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, tooltip: 'Xoay ngẫu nhiên mỗi sprite.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmRandomRotation = true;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0.05, tooltip: 'Thời gian mỗi sprite bay vào (giây).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmInDuration = 0.5;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0, tooltip: 'Độ lệch thời gian ngẫu nhiên giữa các sprite (giây).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmStagger = 0.35;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0, tooltip: 'Giữ che kín bao lâu (giây) trước khi bay ra.', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmHold = 0.2;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 0.05, tooltip: 'Thời gian mỗi sprite bay ra (giây).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmOutDuration = 0.5;
+
+    @property({ group: { name: 'Sprite Swarm', id: 'swarm' }, min: 1, step: 1, tooltip: 'Giới hạn số sprite tối đa (an toàn hiệu năng).', visible: function (this: PhaseManager) { return this.transitionType === PhaseTransitionType.SpriteSwarm; } })
+    public swarmMaxSprites = 500;
+
+    private swarmPieces: SwarmPiece[] = [];
+
     @property({ readonly: true })
     public currentPhaseIndex = 0;
 
@@ -69,22 +121,16 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
     /** How many entries of PROGRESS_MILESTONES have been sent. */
     private reportedMilestoneCount = 0;
 
-    /** Resting local position of every phase node, captured from the scene on load. */
-    private readonly homePositions = new Map<Node, Vec3>();
+    /** Local centre position captured from the first active phase. */
+    private centerScreenPosition = new Vec3();
     private isChangingPhase = false;
     private delayTween: Tween<Node> | null = null;
-    private readonly outgoingTweens: Tween<Node>[] = [];
-    private readonly incomingTweens: Tween<Node>[] = [];
+    private outgoingTween: Tween<Node> | null = null;
+    private incomingTween: Tween<Node> | null = null;
     private transitionTween: Tween<Node> | null = null;
 
-    public get CurrentPhaseObjects(): Node[] {
-        return this.GetPhaseObjects(this.currentPhaseIndex);
-    }
-
-    /** Valid nodes of the phase at index (empty when out of range). */
-    public GetPhaseObjects(index: number): Node[] {
-        const nodes = this.phases[index]?.phaseObjects ?? [];
-        return nodes.filter(node => !!node?.isValid);
+    public get CurrentPhaseObject(): Node | null {
+        return this.phases[this.currentPhaseIndex]?.phaseObject ?? null;
     }
 
     /** Sum of totalSteps over every phase. */
@@ -186,24 +232,19 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
         this.currentPhaseIndex = Math.max(0, Math.min(this.currentPhaseIndex, this.phases.length - 1));
         for (let index = 0; index < this.phases.length; index++) {
+            const phaseNode = this.phases[index]?.phaseObject;
+            if (!phaseNode) continue;
+
             const isCurrent = index === this.currentPhaseIndex;
-            for (const phaseNode of this.GetPhaseObjects(index)) {
-                if (!this.homePositions.has(phaseNode)) this.homePositions.set(phaseNode, phaseNode.position.clone());
-                phaseNode.active = isCurrent;
-            }
+            phaseNode.active = isCurrent;
+            if (!isCurrent) continue;
+
+            Vec3.copy(this.centerScreenPosition, phaseNode.position);
+            this.phases[index].onPhaseReady.invoke();
+            if (this.phases[index].stopGameOnReady) GameManager.Ins?.StopGame();
         }
 
-        this.phases[this.currentPhaseIndex]?.onPhaseReady.invoke();
         if (this.phaseTransitionObject) this.phaseTransitionObject.active = false;
-    }
-
-    private GetHomePosition(node: Node): Vec3 {
-        let home = this.homePositions.get(node);
-        if (!home) {
-            home = node.position.clone();
-            this.homePositions.set(node, home);
-        }
-        return home;
     }
 
     private beginPhaseTransition(): void {
@@ -218,49 +259,48 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
             return;
         }
 
+        if (this.transitionType === PhaseTransitionType.SpriteSwarm && this.swarmSpriteFrame && this.playSwarmTransition()) {
+            return;
+        }
+
         this.slideToNextPhase();
     }
 
     private slideToNextPhase(): void {
-        const oldNodes = this.CurrentPhaseObjects;
+        const oldPhase = this.CurrentPhaseObject;
         const newIndex = this.currentPhaseIndex + 1;
-        const newNodes = this.GetPhaseObjects(newIndex);
+        const newPhase = this.phases[newIndex];
+        const newNode = newPhase?.phaseObject ?? null;
         const duration = Math.max(0.01, this.transitionDuration);
-        const isVertical = this.transitionType === PhaseTransitionType.VerticalSlide;
 
         this.currentPhaseIndex = newIndex;
         this.currentStepCount = 0;
 
-        for (const oldNode of oldNodes) {
-            const home = this.GetHomePosition(oldNode);
-            const oldTarget = isVertical
-                ? new Vec3(home.x, home.y + this.offScreenBottomY, oldNode.position.z)
-                : new Vec3(home.x + this.offScreenLeftX, home.y, oldNode.position.z);
-            this.outgoingTweens.push(tween(oldNode)
+        if (oldPhase) {
+            const oldTarget = this.transitionType === PhaseTransitionType.VerticalSlide
+                ? new Vec3(this.centerScreenPosition.x, this.centerScreenPosition.y + this.offScreenBottomY, oldPhase.position.z)
+                : new Vec3(this.centerScreenPosition.x + this.offScreenLeftX, this.centerScreenPosition.y, oldPhase.position.z);
+            this.outgoingTween = tween(oldPhase)
                 .to(duration, { position: oldTarget }, { easing: 'quadInOut' })
-                .call(() => oldNode.active = false)
-                .start());
+                .call(() => oldPhase.active = false)
+                .start();
         }
 
-        if (newNodes.length === 0) {
+        if (!newNode) {
             this.completeTransition();
             return;
         }
 
-        newNodes.forEach((newNode, index) => {
-            const home = this.GetHomePosition(newNode);
-            const startPosition = isVertical
-                ? new Vec3(home.x, home.y + this.offScreenBottomY, newNode.position.z)
-                : new Vec3(home.x + this.offScreenRightX, home.y, newNode.position.z);
-            const targetPosition = new Vec3(home.x, home.y, newNode.position.z);
-            newNode.active = true;
-            newNode.setPosition(startPosition);
-
-            const incoming = tween(newNode).to(duration, { position: targetPosition }, { easing: 'quadInOut' });
-            // All nodes share the same duration: the first one reports the end of the transition.
-            if (index === 0) incoming.call(() => this.completeTransition());
-            this.incomingTweens.push(incoming.start());
-        });
+        const startPosition = this.transitionType === PhaseTransitionType.VerticalSlide
+            ? new Vec3(this.centerScreenPosition.x, this.centerScreenPosition.y + this.offScreenBottomY, newNode.position.z)
+            : new Vec3(this.centerScreenPosition.x + this.offScreenRightX, this.centerScreenPosition.y, newNode.position.z);
+        const targetPosition = new Vec3(this.centerScreenPosition.x, this.centerScreenPosition.y, newNode.position.z);
+        newNode.active = true;
+        newNode.setPosition(startPosition);
+        this.incomingTween = tween(newNode)
+            .to(duration, { position: targetPosition }, { easing: 'quadInOut' })
+            .call(() => this.completeTransition())
+            .start();
     }
 
     private playObjectTransition(): void {
@@ -278,26 +318,188 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
             .start();
     }
 
+    // =========================================================
+    // SPRITE SWARM TRANSITION
+    // =========================================================
+
+    /** Returns false when there is no Canvas to draw on (the caller then slides instead). */
+    private playSwarmTransition(): boolean {
+        const layer = this.getSwarmLayer();
+        const layerTransform = layer?.getComponent(UITransform);
+        const canvasTransform = this.findCanvas()?.getComponent(UITransform);
+        if (!layer || !layerTransform || !canvasTransform) return false;
+
+        this.clearSwarm();
+        layer.active = true;
+        layer.setSiblingIndex(layer.parent ? layer.parent.children.length - 1 : 0);
+
+        // Visible screen in the layer's local space, whatever the device ratio.
+        const screen = canvasTransform.getBoundingBoxToWorld();
+        const min = layerTransform.convertToNodeSpaceAR(new Vec3(screen.xMin, screen.yMin, 0));
+        const max = layerTransform.convertToNodeSpaceAR(new Vec3(screen.xMax, screen.yMax, 0));
+        const margin = this.swarmMargin;
+        const left = Math.min(min.x, max.x) - margin;
+        const right = Math.max(min.x, max.x) + margin;
+        const bottom = Math.min(min.y, max.y) - margin;
+        const top = Math.max(min.y, max.y) + margin;
+        const midX = (left + right) * 0.5;
+
+        let size = Math.max(10, this.swarmSpriteSize);
+        let cell = size * Math.max(0.3, this.swarmSpacing);
+        let cols = Math.ceil((right - left) / cell) + 1;
+        let rows = Math.ceil((top - bottom) / cell) + 1;
+        // Wide screens (fold, landscape) would need more sprites than the budget:
+        // grow the sprites and the grid together so the cover stays as dense.
+        const budget = Math.max(1, this.swarmMaxSprites);
+        if (cols * rows > budget) {
+            const grow = Math.sqrt((cols * rows) / budget) * 1.05;
+            size *= grow;
+            cell *= grow;
+            cols = Math.ceil((right - left) / cell) + 1;
+            rows = Math.ceil((top - bottom) / cell) + 1;
+        }
+
+        const frame = this.swarmSpriteFrame!;
+        const aspect = frame.rect.height > 0 ? frame.rect.height / frame.rect.width : 1;
+        const width = right - left;
+        const cells: Vec3[] = [];
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const jitter = cell * 0.25;
+                cells.push(new Vec3(
+                    left + c * cell + (Math.random() * 2 - 1) * jitter,
+                    bottom + r * cell + (Math.random() * 2 - 1) * jitter,
+                    0,
+                ));
+            }
+        }
+        // Random draw order so the pile looks natural.
+        cells.sort(() => Math.random() - 0.5);
+
+        for (const target of cells.slice(0, this.swarmMaxSprites)) {
+            const fromLeft = target.x < midX;
+            const offset = width * 0.5 + size + Math.random() * size;
+            const start = new Vec3(fromLeft ? left - offset + (target.x - left) * 0.3 : right + offset - (right - target.x) * 0.3, target.y, 0);
+            const exit = new Vec3(fromLeft ? left - size * 1.5 - Math.random() * size : right + size * 1.5 + Math.random() * size, target.y + (Math.random() * 2 - 1) * size * 0.3, 0);
+
+            const node = new Node('SwarmSprite');
+            node.layer = layer.layer;
+            const transform = node.addComponent(UITransform);
+            transform.setContentSize(size, size * aspect);
+            const sprite = node.addComponent(Sprite);
+            sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+            sprite.spriteFrame = frame;
+            const range = this.swarmScaleRange;
+            const scale = range.x + Math.random() * Math.max(0, range.y - range.x);
+            node.setScale(scale, scale, 1);
+            if (this.swarmRandomRotation) node.angle = Math.random() * 360;
+            node.setParent(layer);
+            node.setPosition(start);
+
+            this.swarmPieces.push({ node, target, exit, delay: Math.random() * this.swarmStagger });
+        }
+
+        const pieces = this.swarmPieces;
+        let arrived = 0;
+        for (const piece of pieces) {
+            tween(piece.node)
+                .delay(piece.delay)
+                .to(this.swarmInDuration, { position: piece.target }, { easing: 'quadOut' })
+                .call(() => {
+                    if (++arrived === pieces.length) this.onSwarmCovered(layer);
+                })
+                .start();
+        }
+        if (pieces.length === 0) this.onSwarmCovered(layer);
+        return true;
+    }
+
+    /** The screen is hidden: swap the phases, then let the swarm fly back out to both sides. */
+    private onSwarmCovered(layer: Node): void {
+        this.transitionTween = tween(layer)
+            .delay(this.swarmHold)
+            .call(() => {
+                this.switchPhaseImmediately();
+                const pieces = this.swarmPieces;
+                let gone = 0;
+                for (const piece of pieces) {
+                    tween(piece.node)
+                        .delay(Math.random() * this.swarmStagger)
+                        .to(this.swarmOutDuration, { position: piece.exit }, { easing: 'quadIn' })
+                        .call(() => {
+                            if (++gone !== pieces.length) return;
+                            this.clearSwarm();
+                            this.completeTransition();
+                        })
+                        .start();
+                }
+                if (pieces.length === 0) this.completeTransition();
+            })
+            .start();
+    }
+
+    private clearSwarm(): void {
+        for (const piece of this.swarmPieces) {
+            Tween.stopAllByTarget(piece.node);
+            if (piece.node.isValid) piece.node.destroy();
+        }
+        this.swarmPieces = [];
+    }
+
+    private getSwarmLayer(): Node | null {
+        if (this.swarmLayer?.isValid) {
+            if (!this.swarmLayer.getComponent(UITransform)) this.swarmLayer.addComponent(UITransform);
+            return this.swarmLayer;
+        }
+
+        const canvas = this.findCanvas();
+        if (!canvas) return null;
+        const layer = new Node('PhaseSwarmLayer');
+        layer.layer = canvas.layer;
+        layer.addComponent(UITransform);
+        layer.setParent(canvas);
+        this.swarmLayer = layer;
+        return layer;
+    }
+
+    private findCanvas(): Node | null {
+        if (this.swarmLayer?.isValid) {
+            let node: Node | null = this.swarmLayer;
+            while (node) {
+                if (node.getComponent(Canvas)) return node;
+                node = node.parent;
+            }
+        }
+        return this.node.scene?.getComponentInChildren(Canvas)?.node ?? null;
+    }
+
     private switchPhaseImmediately(): void {
-        for (const oldNode of this.CurrentPhaseObjects) oldNode.active = false;
+        const oldNode = this.CurrentPhaseObject;
         this.currentPhaseIndex++;
         this.currentStepCount = 0;
+        if (oldNode) oldNode.active = false;
 
-        for (const newNode of this.CurrentPhaseObjects) {
-            newNode.setPosition(this.GetHomePosition(newNode));
+        const newPhase = this.phases[this.currentPhaseIndex];
+        const newNode = newPhase?.phaseObject;
+        if (newNode) {
+            newNode.setPosition(this.centerScreenPosition);
             newNode.active = true;
         }
     }
 
     private completeTransition(): void {
         this.isChangingPhase = false;
-        this.outgoingTweens.length = 0;
-        this.incomingTweens.length = 0;
+        this.outgoingTween = null;
+        this.incomingTween = null;
         this.transitionTween = null;
 
         const phase = this.phases[this.currentPhaseIndex];
         phase?.onPhaseReady.invoke();
-        if (!GameManager.Ins?.isLoseGame) GameManager.Ins?.SetIsPlaying(true);
+        if (phase?.stopGameOnReady) {
+            GameManager.Ins?.StopGame();
+        } else if (!GameManager.Ins?.isLoseGame && !GameManager.Ins?.IsStopGameState()) {
+            GameManager.Ins?.SetIsPlaying(true);
+        }
         HandTutManager.Ins?.StartHandTutNoDelay();
     }
 
@@ -317,12 +519,13 @@ export class PhaseManager extends Ply_Singleton<PhaseManager> {
 
     private stopTransitionTweens(): void {
         this.delayTween?.stop();
-        for (const outgoing of this.outgoingTweens) outgoing.stop();
-        for (const incoming of this.incomingTweens) incoming.stop();
+        this.outgoingTween?.stop();
+        this.incomingTween?.stop();
         this.transitionTween?.stop();
+        this.clearSwarm();
         this.delayTween = null;
-        this.outgoingTweens.length = 0;
-        this.incomingTweens.length = 0;
+        this.outgoingTween = null;
+        this.incomingTween = null;
         this.transitionTween = null;
     }
 }
