@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "6261e08c-7563-4f90-8b14-337770e916cc",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "6261e08c-7563-4f90-8b14-337770e916cc@6c48a",
+      "displayName": "Vanilla in bowl",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "6261e08c-7563-4f90-8b14-337770e916cc",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "6261e08c-7563-4f90-8b14-337770e916cc@f9941",
+      "displayName": "Vanilla in bowl",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 1,
+        "trimY": 1,
+        "width": 264,
+        "height": 134,
+        "rawWidth": 266,
+        "rawHeight": 136,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -132,
+            -67,
+            0,
+            132,
+            -67,
+            0,
+            -132,
+            67,
+            0,
+            132,
+            67,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            1,
+            135,
+            265,
+            135,
+            1,
+            1,
+            265,
+            1
+          ],
+          "nuv": [
+            0.0037593984962406013,
+            0.007352941176470588,
+            0.9962406015037594,
+            0.007352941176470588,
+            0.0037593984962406013,
+            0.9926470588235294,
+            0.9962406015037594,
+            0.9926470588235294
+          ],
+          "minPos": [
+            -132,
+            -67,
+            0
+          ],
+          "maxPos": [
+            132,
+            67,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "6261e08c-7563-4f90-8b14-337770e916cc@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "6261e08c-7563-4f90-8b14-337770e916cc@6c48a"
+  }
+}

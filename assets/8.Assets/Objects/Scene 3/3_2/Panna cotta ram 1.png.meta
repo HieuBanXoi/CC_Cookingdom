@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "45d2877b-9156-4940-a0e9-e4c78ff51f4e",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "45d2877b-9156-4940-a0e9-e4c78ff51f4e@6c48a",
+      "displayName": "Panna cotta ram 1",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "45d2877b-9156-4940-a0e9-e4c78ff51f4e",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "45d2877b-9156-4940-a0e9-e4c78ff51f4e@f9941",
+      "displayName": "Panna cotta ram 1",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 1,
+        "trimY": 1,
+        "width": 205,
+        "height": 192,
+        "rawWidth": 207,
+        "rawHeight": 194,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -102.5,
+            -96,
+            0,
+            102.5,
+            -96,
+            0,
+            -102.5,
+            96,
+            0,
+            102.5,
+            96,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            1,
+            193,
+            206,
+            193,
+            1,
+            1,
+            206,
+            1
+          ],
+          "nuv": [
+            0.004830917874396135,
+            0.005154639175257732,
+            0.9951690821256038,
+            0.005154639175257732,
+            0.004830917874396135,
+            0.9948453608247423,
+            0.9951690821256038,
+            0.9948453608247423
+          ],
+          "minPos": [
+            -102.5,
+            -96,
+            0
+          ],
+          "maxPos": [
+            102.5,
+            96,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "45d2877b-9156-4940-a0e9-e4c78ff51f4e@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "45d2877b-9156-4940-a0e9-e4c78ff51f4e@6c48a"
+  }
+}

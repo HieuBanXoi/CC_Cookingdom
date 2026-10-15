@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "fbcf2715-b537-4540-8bb3-9e2b89d1c345",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "fbcf2715-b537-4540-8bb3-9e2b89d1c345@6c48a",
+      "displayName": "Panna cotta glass 1",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "fbcf2715-b537-4540-8bb3-9e2b89d1c345",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "fbcf2715-b537-4540-8bb3-9e2b89d1c345@f9941",
+      "displayName": "Panna cotta glass 1",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 1,
+        "trimY": 1,
+        "width": 240,
+        "height": 207,
+        "rawWidth": 242,
+        "rawHeight": 209,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -120,
+            -103.5,
+            0,
+            120,
+            -103.5,
+            0,
+            -120,
+            103.5,
+            0,
+            120,
+            103.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            1,
+            208,
+            241,
+            208,
+            1,
+            1,
+            241,
+            1
+          ],
+          "nuv": [
+            0.004132231404958678,
+            0.004784688995215311,
+            0.9958677685950413,
+            0.004784688995215311,
+            0.004132231404958678,
+            0.9952153110047847,
+            0.9958677685950413,
+            0.9952153110047847
+          ],
+          "minPos": [
+            -120,
+            -103.5,
+            0
+          ],
+          "maxPos": [
+            120,
+            103.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "fbcf2715-b537-4540-8bb3-9e2b89d1c345@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "fbcf2715-b537-4540-8bb3-9e2b89d1c345@6c48a"
+  }
+}

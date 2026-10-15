@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "846fde91-6fd7-4e60-b614-3a45543bd4d3",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "846fde91-6fd7-4e60-b614-3a45543bd4d3@6c48a",
+      "displayName": "Mint on panna cotta",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "846fde91-6fd7-4e60-b614-3a45543bd4d3",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "846fde91-6fd7-4e60-b614-3a45543bd4d3@f9941",
+      "displayName": "Mint on panna cotta",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 1,
+        "trimY": 1,
+        "width": 124,
+        "height": 120,
+        "rawWidth": 126,
+        "rawHeight": 122,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -62,
+            -60,
+            0,
+            62,
+            -60,
+            0,
+            -62,
+            60,
+            0,
+            62,
+            60,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            1,
+            121,
+            125,
+            121,
+            1,
+            1,
+            125,
+            1
+          ],
+          "nuv": [
+            0.007936507936507936,
+            0.00819672131147541,
+            0.9920634920634921,
+            0.00819672131147541,
+            0.007936507936507936,
+            0.9918032786885246,
+            0.9920634920634921,
+            0.9918032786885246
+          ],
+          "minPos": [
+            -62,
+            -60,
+            0
+          ],
+          "maxPos": [
+            62,
+            60,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "846fde91-6fd7-4e60-b614-3a45543bd4d3@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "846fde91-6fd7-4e60-b614-3a45543bd4d3@6c48a"
+  }
+}

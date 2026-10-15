@@ -1,0 +1,134 @@
+{
+  "ver": "1.0.27",
+  "importer": "image",
+  "imported": true,
+  "uuid": "e7e5b0b2-f5e7-41ba-9cf0-58b4b6f73889",
+  "files": [
+    ".json",
+    ".png"
+  ],
+  "subMetas": {
+    "6c48a": {
+      "importer": "texture",
+      "uuid": "e7e5b0b2-f5e7-41ba-9cf0-58b4b6f73889@6c48a",
+      "displayName": "Glass bowl",
+      "id": "6c48a",
+      "name": "texture",
+      "userData": {
+        "wrapModeS": "clamp-to-edge",
+        "wrapModeT": "clamp-to-edge",
+        "imageUuidOrDatabaseUri": "e7e5b0b2-f5e7-41ba-9cf0-58b4b6f73889",
+        "isUuid": true,
+        "visible": false,
+        "minfilter": "linear",
+        "magfilter": "linear",
+        "mipfilter": "none",
+        "anisotropy": 0
+      },
+      "ver": "1.0.22",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    },
+    "f9941": {
+      "importer": "sprite-frame",
+      "uuid": "e7e5b0b2-f5e7-41ba-9cf0-58b4b6f73889@f9941",
+      "displayName": "Glass bowl",
+      "id": "f9941",
+      "name": "spriteFrame",
+      "userData": {
+        "trimThreshold": 1,
+        "rotated": false,
+        "offsetX": 0,
+        "offsetY": 0,
+        "trimX": 1,
+        "trimY": 1,
+        "width": 417,
+        "height": 313,
+        "rawWidth": 419,
+        "rawHeight": 315,
+        "borderTop": 0,
+        "borderBottom": 0,
+        "borderLeft": 0,
+        "borderRight": 0,
+        "packable": true,
+        "pixelsToUnit": 100,
+        "pivotX": 0.5,
+        "pivotY": 0.5,
+        "meshType": 0,
+        "vertices": {
+          "rawPosition": [
+            -208.5,
+            -156.5,
+            0,
+            208.5,
+            -156.5,
+            0,
+            -208.5,
+            156.5,
+            0,
+            208.5,
+            156.5,
+            0
+          ],
+          "indexes": [
+            0,
+            1,
+            2,
+            2,
+            1,
+            3
+          ],
+          "uv": [
+            1,
+            314,
+            418,
+            314,
+            1,
+            1,
+            418,
+            1
+          ],
+          "nuv": [
+            0.002386634844868735,
+            0.0031746031746031746,
+            0.9976133651551312,
+            0.0031746031746031746,
+            0.002386634844868735,
+            0.9968253968253968,
+            0.9976133651551312,
+            0.9968253968253968
+          ],
+          "minPos": [
+            -208.5,
+            -156.5,
+            0
+          ],
+          "maxPos": [
+            208.5,
+            156.5,
+            0
+          ]
+        },
+        "isUuid": true,
+        "imageUuidOrDatabaseUri": "e7e5b0b2-f5e7-41ba-9cf0-58b4b6f73889@6c48a",
+        "atlasUuid": "",
+        "trimType": "auto"
+      },
+      "ver": "1.0.12",
+      "imported": true,
+      "files": [
+        ".json"
+      ],
+      "subMetas": {}
+    }
+  },
+  "userData": {
+    "type": "sprite-frame",
+    "fixAlphaTransparencyArtifacts": false,
+    "hasAlpha": true,
+    "redirect": "e7e5b0b2-f5e7-41ba-9cf0-58b4b6f73889@6c48a"
+  }
+}
