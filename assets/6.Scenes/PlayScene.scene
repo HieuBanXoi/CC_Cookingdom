@@ -28727,7 +28727,7 @@
       "__id__": 527
     },
     "totalSteps": 1,
-    "stopGameOnReady": false,
+    "stopGameOnReady": true,
     "onPhaseReady": {
       "__id__": 976
     }
